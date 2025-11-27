@@ -27,20 +27,24 @@ Si el usuario pide algo oficial, dile que consulte directamente con INDAUTOR.
 
 app.post("/chat", async (req, res) => {
   try {
-    const { message, history = [] } = req.body;
+    const { message } = req.body;
+    console.log("Llego mensaje:", message);
 
-    if (!message) {
-      return res.status(400).json({ error: "Falta 'message' en el cuerpo de la petición." });
-    }
+    // RESPUESTA DE PRUEBA, SIN OPENAI
+    const reply = `Recibí tu mensaje: "${message}". (Respuesta de prueba sin OpenAI)`;
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...history,
+    return res.json({
+      reply,
+      history: [
         { role: "user", content: message },
+        { role: "assistant", content: reply },
       ],
     });
+  } catch (error) {
+    console.error("Error en /chat:", error);
+    return res.status(500).json({ error: "Error interno en el servidor" });
+  }
+});
 
     const reply = response.choices[0].message.content;
 
