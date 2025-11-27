@@ -98,12 +98,10 @@ horario oficial de atención al público.
 Por ahora, puedes usar este asistente en cualquier momento para
 recibir orientación general.`
   },
-  // 👉 Agrega aquí más reglas según lo que quieras controlar:
-  // {
-  //   name: "Nombre de la regla",
-  //   check: (msg) => msg.includes("palabra clave"),
-  //   reply: "Tu respuesta fija aquí..."
-  // },
+    name: "Correo de contacto",
+    check: (msg) =>
+    msg.includes("correo") || msg.includes("email de contacto"),
+  reply: `soporte-tecnico.sistema-indarelin@cultura.gob.mx
 ];
 
 // GET /
