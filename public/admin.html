@@ -2,161 +2,461 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Panel Administrativo · Chatbot INDAUTOR</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Administrativo INDAUTOR</title>
+
   <style>
+    :root {
+      --primary: #004b8d;
+      --bg: #f4f6f9;
+      --card-bg: #ffffff;
+      --text-main: #1f2933;
+      --text-muted: #6b7280;
+      --border: #dde3ea;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: system-ui, sans-serif;
       margin: 0;
-      background:#f3f4f6;
-      color:#111827;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
     }
-    header {
-      background:#004b8d;
-      color:white;
-      padding:16px;
+
+    .layout {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
     }
-    header h1 {
-      margin:0;
-      font-size:18px;
-    }
-    header p {
-      margin:4px 0 0;
-      font-size:12px;
-      opacity:0.9;
-    }
-    main {
-      max-width:900px;
-      margin:20px auto;
-      padding:0 20px;
-    }
+
     .card {
-      background:#fff;
-      padding:20px;
-      border-radius:12px;
-      box-shadow:0 4px 8px rgba(0,0,0,0.1);
-      margin-bottom:20px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+      width: 100%;
+      max-width: 960px;
     }
-    h2 {
-      margin-top:0;
-      font-size:16px;
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 22px;
+      color: var(--primary);
     }
-    textarea {
-      width:100%;
-      min-height:260px;
-      padding:10px;
-      font-family:monospace;
-      font-size:13px;
-      border:1px solid #d1d5db;
-      border-radius:8px;
+
+    .subtitle {
+      margin: 0 0 16px;
+      font-size: 13px;
+      color: var(--text-muted);
     }
-    textarea:focus {
-      outline:none;
-      border-color:#004b8d;
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #e0edff;
+      color: #1d3b6b;
+      font-size: 11px;
+      margin-bottom: 16px;
     }
-    .readonly-box {
-      white-space:pre-wrap;
-      background:#f9fafb;
-      padding:10px;
-      border-radius:8px;
-      border:1px dashed #d1d5db;
-      font-size:12px;
-      max-height:200px;
-      overflow-y:auto;
+
+    .tag span {
+      font-size: 14px;
     }
-    button {
-      border:none;
-      padding:8px 16px;
-      border-radius:999px;
-      cursor:pointer;
-      font-size:13px;
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
     }
-    .btn-primary {
-      background:#004b8d;
-      color:white;
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
     }
-    .btn-secondary {
-      background:#e5e7eb;
+
+    .stat-card {
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      font-size: 12px;
     }
-    .status {
-      margin-left:10px;
-      font-size:12px;
+
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
     }
-    .status.ok { color:#059669; }
-    .status.error { color:#b91c1c; }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .list {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      max-height: 260px;
+      overflow: auto;
+      padding: 8px;
+      font-size: 12px;
+    }
+
+    .item {
+      padding: 6px 8px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+    }
+
+    .item-time {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .item-user {
+      font-weight: 600;
+      font-size: 12px;
+      color: #111827;
+    }
+
+    .item-bot {
+      font-size: 12px;
+      color: #374151;
+      margin-top: 2px;
+    }
+
+    .right-panel {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 180px !important;
+    }
+
+    .status-box {
+      font-size: 12px;
+      border-radius: 10px;
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      padding: 8px;
+      white-space: pre-wrap;
+      max-height: 120px;
+      overflow: auto;
+    }
+
+    /* LOGIN */
+    .login-card {
+      max-width: 360px;
+      width: 100%;
+      padding: 24px;
+      border-radius: 16px;
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+      text-align: center;
+    }
+
+    .login-title {
+      font-size: 20px;
+      margin-bottom: 4px;
+      color: var(--primary);
+    }
+
+    .login-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      outline: none;
+      margin-bottom: 10px;
+    }
+
+    .input:focus {
+      border-color: var(--primary);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border-radius: 999px;
+      border: none;
+      background: var(--primary);
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .login-error {
+      font-size: 11px;
+      color: #b91c1c;
+      min-height: 14px;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .card {
+        padding: 16px;
+      }
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
   </style>
+
+  <!-- Chart.js para la gráfica -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
-  <header>
-    <h1>Panel Administrativo del Chatbot INDAUTOR</h1>
-    <p>Demo no oficial · Ajuste dinámico del prompt del asistente</p>
-  </header>
+  <div class="layout" id="login-view">
+    <div class="login-card">
+      <h2 class="login-title">Acceso administrativo</h2>
+      <p class="login-sub">Demo simple sin seguridad real. No usar en producción.</p>
+      <input
+        type="password"
+        id="admin-password"
+        class="input"
+        placeholder="Ingresa la contraseña"
+      />
+      <button class="btn" id="login-btn">Entrar</button>
+      <div class="login-error" id="login-error"></div>
+    </div>
+  </div>
 
-  <main>
-    <section class="card">
-      <h2>Prompt actual</h2>
-      <textarea id="prompt"></textarea>
-      <div style="margin-top:12px;">
-        <button class="btn-primary" id="saveBtn">Guardar cambios</button>
-        <button class="btn-secondary" id="resetBtn">Restablecer base</button>
-        <span id="status" class="status"></span>
+  <div class="layout" id="admin-view" style="display:none;">
+    <div class="card">
+      <div class="tag">
+        <span>🛠️</span> Panel demo administrativo INDAUTOR
       </div>
-    </section>
+      <h1>Panel de monitoreo del chatbot</h1>
+      <p class="subtitle">
+        Aquí puedes ver un resumen de la actividad reciente del chatbot conectado a utneza.store.
+      </p>
 
-    <section class="card">
-      <h2>Prompt base (solo lectura)</h2>
-      <div id="basePrompt" class="readonly-box"></div>
-    </section>
-  </main>
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-label">Mensajes totales</div>
+          <div class="stat-value" id="stat-total">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Últimas 24 horas</div>
+          <div class="stat-value" id="stat-24h">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Último mensaje</div>
+          <div class="stat-value" id="stat-last-time">-</div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <h3 style="margin: 0 0 8px; font-size: 14px;">Últimos mensajes</h3>
+          <div class="list" id="messages-list">
+            Cargando historial…
+          </div>
+        </div>
+
+        <div class="right-panel">
+          <div>
+            <h3 style="margin: 0 0 4px; font-size: 14px;">Actividad por hora</h3>
+            <canvas id="chart"></canvas>
+          </div>
+          <div>
+            <h3 style="margin: 8px 0 4px; font-size: 13px;">Estado del backend</h3>
+            <div class="status-box" id="status-box">Verificando…</div>
+          </div>
+          <button class="btn" id="refresh-btn">Actualizar datos</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const statusEl = document.getElementById("status");
+    // 🔐 Contraseña demo (CAMBIA ESTO si quieres otra)
+    const ADMIN_PASSWORD = "admin123";
 
-    async function loadConfig() {
-      statusEl.textContent = "Cargando...";
+    const loginView = document.getElementById("login-view");
+    const adminView = document.getElementById("admin-view");
+    const loginBtn = document.getElementById("login-btn");
+    const passwordInput = document.getElementById("admin-password");
+    const loginError = document.getElementById("login-error");
+
+    loginBtn.addEventListener("click", () => {
+      const value = passwordInput.value.trim();
+      if (value === ADMIN_PASSWORD) {
+        loginView.style.display = "none";
+        adminView.style.display = "flex";
+        loadData();
+      } else {
+        loginError.textContent = "Contraseña incorrecta (pista: admin123 😉)";
+      }
+    });
+
+    passwordInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") loginBtn.click();
+    });
+
+    // === Lógica del panel ===
+    const totalEl = document.getElementById("stat-total");
+    const stat24hEl = document.getElementById("stat-24h");
+    const lastTimeEl = document.getElementById("stat-last-time");
+    const messagesList = document.getElementById("messages-list");
+    const statusBox = document.getElementById("status-box");
+    const refreshBtn = document.getElementById("refresh-btn");
+
+    let chartInstance = null;
+
+    async function loadData() {
+      await Promise.all([loadStatus(), loadStats()]);
+    }
+
+    async function loadStatus() {
       try {
-        const res = await fetch("/admin/config");
+        const res = await fetch("/chat");
         const data = await res.json();
-        document.getElementById("prompt").value = data.prompt;
-        document.getElementById("basePrompt").textContent = data.basePrompt;
-        statusEl.textContent = "Listo.";
-        statusEl.className = "status ok";
-      } catch {
-        statusEl.textContent = "Error cargando configuración.";
-        statusEl.className = "status error";
+        statusBox.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        statusBox.textContent = "Error al consultar /chat:\n" + err;
       }
     }
 
-    async function savePrompt() {
-      const newPrompt = document.getElementById("prompt").value;
-      statusEl.textContent = "Guardando...";
-
+    async function loadStats() {
       try {
-        const res = await fetch("/admin/prompt", {
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body:JSON.stringify({ prompt:newPrompt })
-        });
+        const res = await fetch("/stats");
+        const data = await res.json();
 
-        if (!res.ok) throw new Error();
-        statusEl.textContent = "Guardado.";
-        statusEl.className = "status ok";
-      } catch {
-        statusEl.textContent = "Error guardando.";
-        statusEl.className = "status error";
+        // Totales
+        totalEl.textContent = data.totalMensajes ?? 0;
+
+        // Último mensaje
+        if (data.ultimos && data.ultimos.length > 0) {
+          const last = data.ultimos[0];
+          const date = new Date(last.timestamp);
+          lastTimeEl.textContent = date.toLocaleString();
+        } else {
+          lastTimeEl.textContent = "-";
+        }
+
+        // Últimas 24h
+        const now = Date.now();
+        const last24 = (data.ultimos || []).filter((m) => {
+          const t = new Date(m.timestamp).getTime();
+          return now - t <= 24 * 60 * 60 * 1000;
+        });
+        stat24hEl.textContent = last24.length;
+
+        // Lista de mensajes
+        if (!data.ultimos || data.ultimos.length === 0) {
+          messagesList.textContent = "Sin mensajes registrados todavía.";
+        } else {
+          messagesList.innerHTML = "";
+          data.ultimos.forEach((m) => {
+            const div = document.createElement("div");
+            div.className = "item";
+
+            const time = document.createElement("div");
+            time.className = "item-time";
+            time.textContent = new Date(m.timestamp).toLocaleString();
+
+            const user = document.createElement("div");
+            user.className = "item-user";
+            user.textContent = "Usuario: " + m.message;
+
+            const bot = document.createElement("div");
+            bot.className = "item-bot";
+            bot.textContent = "Bot: " + m.reply;
+
+            div.appendChild(time);
+            div.appendChild(user);
+            div.appendChild(bot);
+
+            messagesList.appendChild(div);
+          });
+        }
+
+        // Gráfica
+        const labels = (data.grafica?.labels || []).map((l) =>
+          l.replace("T", " ")
+        );
+        const values = data.grafica?.data || [];
+
+        const ctx = document.getElementById("chart").getContext("2d");
+        if (chartInstance) {
+          chartInstance.destroy();
+        }
+        chartInstance = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Mensajes por hora",
+                data: values,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+            },
+            scales: {
+              x: {
+                ticks: { font: { size: 9 } },
+              },
+              y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 },
+              },
+            },
+          },
+        });
+      } catch (err) {
+        messagesList.textContent = "Error al cargar estadísticas:\n" + err;
       }
     }
 
-    function resetPrompt() {
-      document.getElementById("prompt").value =
-        document.getElementById("basePrompt").textContent;
-      statusEl.textContent = "Restablecido (recuerda guardar).";
-    }
-
-    document.getElementById("saveBtn").onclick = savePrompt;
-    document.getElementById("resetBtn").onclick = resetPrompt;
-
-    loadConfig();
+    refreshBtn.addEventListener("click", loadData);
   </script>
 </body>
 </html>
