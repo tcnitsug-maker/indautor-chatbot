@@ -3,6 +3,16 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Necesario para rutas absolutas ESModule
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Archivos estáticos desde /public
+app.use(express.static(path.join(__dirname, "public")));
+
 
 dotenv.config();
 
