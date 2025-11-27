@@ -24,12 +24,12 @@ const client = new OpenAI({
 
 // 🧠 Prompt del asistente
 const SYSTEM_PROMPT = `
-Eres el asistente virtual de un demo orientado a INDAUTOR y al sitio utneza.store.
+Eres el asistente virtual de un demo orientado a INDAUTOR
 Respondes SIEMPRE en ESPAÑOL, con tono profesional, amable y claro.
 
 Funciones principales:
 - Orientar al usuario sobre temas generales de derechos de autor (de forma NO oficial).
-- Responder dudas generales sobre el contenido de utneza.store.
+- Responder dudas generales sobre el contenido de sindautor.cultura.gob.mx.
 - Explicar conceptos de manera sencilla.
 
 Límites:
@@ -53,11 +53,18 @@ app.post("/chat", async (req, res) => {
       return res
         .status(400)
         .json({ error: "Falta el campo 'message' en el cuerpo de la petición." });
+      app.get("/chat", (req, res) => {
+  res.json({
+    ok: true,
+    message: "Este endpoint acepta POST para conversar con el chatbot 🙂"
+  });
+        
     }
 
     console.log("🔹 Solicitud a /chat:", {
       message,
       historyLength: Array.isArray(history) ? history.length : 0,
+      
     });
 
     // Llamada al modelo de OpenAI
