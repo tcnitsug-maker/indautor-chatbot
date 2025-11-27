@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Panel Administrativo · Chatbot INDAUTOR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      background:#f3f4f6;
+      color:#111827;
+    }
+    header {
+      background:#004b8d;
+      color:white;
+      padding:16px;
+    }
+    header h1 {
+      margin:0;
+      font-size:18px;
+    }
+    header p {
+      margin:4px 0 0;
+      font-size:12px;
+      opacity:0.9;
+    }
+    main {
+      max-width:900px;
+      margin:20px auto;
+      padding:0 20px;
+    }
+    .card {
+      background:#fff;
+      padding:20px;
+      border-radius:12px;
+      box-shadow:0 4px 8px rgba(0,0,0,0.1);
+      margin-bottom:20px;
+    }
+    h2 {
+      margin-top:0;
+      font-size:16px;
+    }
+    textarea {
+      width:100%;
+      min-height:260px;
+      padding:10px;
+      font-family:monospace;
+      font-size:13px;
+      border:1px solid #d1d5db;
+      border-radius:8px;
+    }
+    textarea:focus {
+      outline:none;
+      border-color:#004b8d;
+    }
+    .readonly-box {
+      white-space:pre-wrap;
+      background:#f9fafb;
+      padding:10px;
+      border-radius:8px;
+      border:1px dashed #d1d5db;
+      font-size:12px;
+      max-height:200px;
+      overflow-y:auto;
+    }
+    button {
+      border:none;
+      padding:8px 16px;
+      border-radius:999px;
+      cursor:pointer;
+      font-size:13px;
+    }
+    .btn-primary {
+      background:#004b8d;
+      color:white;
+    }
+    .btn-secondary {
+      background:#e5e7eb;
+    }
+    .status {
+      margin-left:10px;
+      font-size:12px;
+    }
+    .status.ok { color:#059669; }
+    .status.error { color:#b91c1c; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Panel Administrativo del Chatbot INDAUTOR</h1>
+    <p>Demo no oficial · Ajuste dinámico del prompt del asistente</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Prompt actual</h2>
+      <textarea id="prompt"></textarea>
+      <div style="margin-top:12px;">
+        <button class="btn-primary" id="saveBtn">Guardar cambios</button>
+        <button class="btn-secondary" id="resetBtn">Restablecer base</button>
+        <span id="status" class="status"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Prompt base (solo lectura)</h2>
+      <div id="basePrompt" class="readonly-box"></div>
+    </section>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById("status");
+
+    async function loadConfig() {
+      statusEl.textContent = "Cargando...";
+      try {
+        const res = await fetch("/admin/config");
+        const data = await res.json();
+        document.getElementById("prompt").value = data.prompt;
+        document.getElementById("basePrompt").textContent = data.basePrompt;
+        statusEl.textContent = "Listo.";
+        statusEl.className = "status ok";
+      } catch {
+        statusEl.textContent = "Error cargando configuración.";
+        statusEl.className = "status error";
+      }
+    }
+
+    async function savePrompt() {
+      const newPrompt = document.getElementById("prompt").value;
+      statusEl.textContent = "Guardando...";
+
+      try {
+        const res = await fetch("/admin/prompt", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body:JSON.stringify({ prompt:newPrompt })
+        });
+
+        if (!res.ok) throw new Error();
+        statusEl.textContent = "Guardado.";
+        statusEl.className = "status ok";
+      } catch {
+        statusEl.textContent = "Error guardando.";
+        statusEl.className = "status error";
+      }
+    }
+
+    function resetPrompt() {
+      document.getElementById("prompt").value =
+        document.getElementById("basePrompt").textContent;
+      statusEl.textContent = "Restablecido (recuerda guardar).";
+    }
+
+    document.getElementById("saveBtn").onclick = savePrompt;
+    document.getElementById("resetBtn").onclick = resetPrompt;
+
+    loadConfig();
+  </script>
+</body>
+</html>
