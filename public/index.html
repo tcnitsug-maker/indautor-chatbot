@@ -149,304 +149,328 @@
   </footer>
 
   <!-- Widget INDARELÍN -->
-<div id="indautor-chat-widget-root"></div>
+  <div id="indautor-chat-widget-root"></div>
 
-<script>
-(function () {
-  const API_URL = "https://indautor-chatbot-1.onrender.com/chat";
+  <script>
+  (function () {
+    const API_URL = "https://indautor-chatbot-1.onrender.com/chat";
 
-  /* ============================================================
-     ESTILOS PRO DEL BOTÓN + TOOLTIP + CHAT WINDOW
-     ============================================================ */
-  const style = document.createElement("style");
-  style.innerHTML = `
-    /* === Botón PRO con logo INDARELÍN === */
-    .indautor-chat-btn {
-      position: fixed;
-      bottom: 22px;
-      right: 22px;
-      width: 70px;
-      height: 70px;
-      border-radius: 50%;
-      cursor: pointer;
-      border: none;
-      background: linear-gradient(135deg, #ffffff 0%, #ffffff 40%, #e6e6e6 100%);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-      z-index: 9999;
-      transition: all 0.25s ease-out;
+    /* ============================================================
+       ESTILOS PRO DEL BOTÓN + TOOLTIP + CHAT WINDOW
+       ============================================================ */
+    const style = document.createElement("style");
+    style.innerHTML = `
+      /* === Botón PRO con logo INDARELÍN === */
+      .indautor-chat-btn {
+        position: fixed;
+        bottom: 22px;
+        right: 22px;
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+        background: linear-gradient(135deg, #ffffff 0%, #ffffff 40%, #e6e6e6 100%);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        z-index: 9999;
+        transition: all 0.25s ease-out;
 
-      background-image: url("img/indarelin.png");
-      background-size: 80%;
-      background-repeat: no-repeat;
-      background-position: center;
+        background-image: url("img/indarelin.png");
+        background-size: 80%;
+        background-repeat: no-repeat;
+        background-position: center;
 
-      border: 3px solid transparent;
-      background-clip: padding-box;
+        border: 3px solid transparent;
+        background-clip: padding-box;
 
-      animation: indarelinPulse 2.6s infinite ease-in-out;
+        animation: indarelinPulse 2.6s infinite ease-in-out;
+      }
+
+      /* Hover elegante */
+      .indautor-chat-btn:hover {
+        transform: scale(1.08) translateY(-4px);
+        box-shadow: 0 10px 28px rgba(0,0,0,0.3);
+        border-color: #004b8d;
+      }
+
+      /* Animación pulse PRO */
+      @keyframes indarelinPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.055); }
+        100% { transform: scale(1); }
+      }
+
+      /* === Tooltip PRO === */
+      .indarelin-tooltip {
+        position: fixed;
+        bottom: 105px;
+        right: 25px;
+        background: #004b8d;
+        color: #ffffff;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(6px);
+        transition: all 0.25s ease;
+        z-index: 9999;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.28);
+      }
+
+      .indarelin-tooltip::after {
+        content: "";
+        position: absolute;
+        bottom: -6px;
+        right: 18px;
+        border-width: 6px;
+        border-style: solid;
+        border-color: #004b8d transparent transparent transparent;
+      }
+
+      .indautor-chat-btn:hover + .indarelin-tooltip {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* === Ventana del chat === */
+      .indautor-chat-window {
+        position: fixed;
+        bottom: 105px;
+        right: 22px;
+        width: 360px;
+        max-width: 95vw;
+        height: 480px;
+        max-height: 75vh;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        z-index: 9999;
+        font-family: system-ui;
+      }
+
+      .indautor-chat-header {
+        padding: 10px 14px;
+        background: #004b8d;
+        color: #ffffff;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        position: relative;
+      }
+
+      .indautor-chat-header-title {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .indautor-chat-header-subtitle {
+        font-size: 11px;
+        opacity: 0.9;
+      }
+
+      .indautor-chat-badge {
+        font-size: 9px;
+        opacity: 0.8;
+        margin-top: 2px;
+      }
+
+      .indautor-chat-close {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        background: transparent;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .indautor-chat-messages {
+        flex: 1;
+        padding: 10px;
+        overflow-y: auto;
+        background: #f4f6f9;
+        font-size: 13px;
+      }
+
+      .indautor-msg {
+        margin-bottom: 8px;
+        max-width: 90%;
+        padding: 8px 10px;
+        border-radius: 10px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+      }
+
+      .indautor-msg-user {
+        background: #e1f0ff;
+        margin-left: auto;
+        border-bottom-right-radius: 2px;
+      }
+
+      .indautor-msg-bot {
+        background: #ffffff;
+        margin-right: auto;
+        border-bottom-left-radius: 2px;
+      }
+
+      .indautor-chat-footer {
+        padding: 8px;
+        border-top: 1px solid #dde3ea;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background: #fff;
+      }
+
+      .indautor-chat-input {
+        flex: 1;
+        font-size: 13px;
+        padding: 7px 9px;
+        border-radius: 999px;
+        border: 1px solid #c3c9d3;
+        outline: none;
+      }
+
+      .indautor-chat-input:focus {
+        border-color: #004b8d;
+      }
+
+      .indautor-chat-send {
+        border: none;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 13px;
+        cursor: pointer;
+        background: #004b8d;
+        color: #fff;
+        align-self: flex-end;
+      }
+
+      /* Hint de idiomas debajo del input */
+      .indautor-lang-hint {
+        font-size: 11px;
+        color: #555;
+        margin-top: 4px;
+        padding: 5px 8px;
+        background: #f4f4f4;
+        border-left: 3px solid #004b8d;
+        border-radius: 4px;
+        line-height: 1.4;
+      }
+    `;
+    document.head.appendChild(style);
+
+    /* ============================================================
+       CREACIÓN DEL BOTÓN, TOOLTIP Y CHAT
+       ============================================================ */
+    const root = document.getElementById("indautor-chat-widget-root") || document.body;
+
+    // Botón
+    const btn = document.createElement("button");
+    btn.className = "indautor-chat-btn";
+    btn.innerHTML = ""; // la imagen es el fondo
+
+    // Tooltip
+    const tooltip = document.createElement("div");
+    tooltip.className = "indarelin-tooltip";
+    tooltip.textContent = "Asistente INDARELÍN";
+
+    // Ventana del chat
+    const win = document.createElement("div");
+    win.className = "indautor-chat-window";
+    win.style.display = "none";
+
+    win.innerHTML = `
+      <div class="indautor-chat-header">
+        <button class="indautor-chat-close" aria-label="Cerrar">×</button>
+        <div class="indautor-chat-header-title">Asistente INDARELÍN</div>
+        <div class="indautor-chat-header-subtitle">Información orientativa</div>
+        <div class="indautor-chat-badge">Demo no oficial</div>
+      </div>
+      <div class="indautor-chat-messages"></div>
+      <div class="indautor-chat-footer">
+        <input type="text" class="indautor-chat-input" placeholder="Escribe tu pregunta..." />
+        <button class="indautor-chat-send">Enviar</button>
+      </div>
+    `;
+
+    /* === Hint de idiomas debajo del input === */
+    const langHint = document.createElement("p");
+    langHint.className = "indautor-lang-hint";
+    langHint.innerHTML = `
+      You can ask in English, or say:<br>
+      – "Answer in English"<br>
+      – "Responde en náhuatl"<br>
+      – "Answer in English and Nahuatl"
+    `;
+    win.querySelector(".indautor-chat-footer").appendChild(langHint);
+
+    // Agregar al DOM
+    root.appendChild(btn);
+    root.appendChild(tooltip);
+    root.appendChild(win);
+
+    /* ============================================================
+       LÓGICA DEL CHAT
+       ============================================================ */
+    const msgContainer = win.querySelector(".indautor-chat-messages");
+    const input = win.querySelector(".indautor-chat-input");
+    const sendBtn = win.querySelector(".indautor-chat-send");
+    const closeBtn = win.querySelector(".indautor-chat-close");
+
+    let history = [];
+
+    function addMessage(text, from) {
+      const div = document.createElement("div");
+      div.className = "indautor-msg " + (from === "user" ? "indautor-msg-user" : "indautor-msg-bot");
+      div.textContent = text;
+      msgContainer.appendChild(div);
+      msgContainer.scrollTop = msgContainer.scrollHeight;
     }
 
-    /* Hover elegante */
-    .indautor-chat-btn:hover {
-      transform: scale(1.08) translateY(-4px);
-      box-shadow: 0 10px 28px rgba(0,0,0,0.3);
-      border-color: #004b8d;
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+
+      addMessage(text, "user");
+      history.push({ role: "user", content: text });
+      input.value = "";
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, history })
+        });
+
+        const data = await res.json();
+        addMessage(data.reply, "bot");
+        history.push({ role: "assistant", content: data.reply });
+      } catch {
+        addMessage("Error al conectar con el servidor.", "bot");
+      }
     }
 
-    /* Animación pulse PRO */
-    @keyframes indarelinPulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.055); }
-      100% { transform: scale(1); }
-    }
+    // EVENTOS
+    btn.onclick = () => {
+      win.style.display = win.style.display === "none" ? "flex" : "none";
+    };
 
-    /* === Tooltip PRO === */
-    .indarelin-tooltip {
-      position: fixed;
-      bottom: 105px;
-      right: 25px;
-      background: #004b8d;
-      color: #ffffff;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      white-space: nowrap;
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(6px);
-      transition: all 0.25s ease;
-      z-index: 9999;
-      box-shadow: 0 4px 18px rgba(0,0,0,0.28);
-    }
+    closeBtn.onclick = () => (win.style.display = "none");
 
-    .indarelin-tooltip::after {
-      content: "";
-      position: absolute;
-      bottom: -6px;
-      right: 18px;
-      border-width: 6px;
-      border-style: solid;
-      border-color: #004b8d transparent transparent transparent;
-    }
+    sendBtn.onclick = sendMessage;
 
-    .indautor-chat-btn:hover + .indarelin-tooltip {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
 
-    /* === Ventana del chat === */
-    .indautor-chat-window {
-      position: fixed;
-      bottom: 105px;
-      right: 22px;
-      width: 360px;
-      max-width: 95vw;
-      height: 480px;
-      max-height: 75vh;
-      background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      z-index: 9999;
-      font-family: system-ui;
-    }
-
-    .indautor-chat-header {
-      padding: 10px 14px;
-      background: #004b8d;
-      color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      position: relative;
-    }
-
-    .indautor-chat-header-title {
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .indautor-chat-header-subtitle {
-      font-size: 11px;
-      opacity: 0.9;
-    }
-
-    .indautor-chat-badge {
-      font-size: 9px;
-      opacity: 0.8;
-      margin-top: 2px;
-    }
-
-    .indautor-chat-close {
-      position: absolute;
-      top: 6px;
-      right: 8px;
-      background: transparent;
-      border: none;
-      color: #fff;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    .indautor-chat-messages {
-      flex: 1;
-      padding: 10px;
-      overflow-y: auto;
-      background: #f4f6f9;
-      font-size: 13px;
-    }
-
-    .indautor-msg {
-      margin-bottom: 8px;
-      max-width: 90%;
-      padding: 8px 10px;
-      border-radius: 10px;
-      line-height: 1.4;
-      white-space: pre-wrap;
-    }
-
-    .indautor-msg-user {
-      background: #e1f0ff;
-      margin-left: auto;
-      border-bottom-right-radius: 2px;
-    }
-
-    .indautor-msg-bot {
-      background: #ffffff;
-      margin-right: auto;
-      border-bottom-left-radius: 2px;
-    }
-
-    .indautor-chat-footer {
-      padding: 8px;
-      border-top: 1px solid #dde3ea;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: #fff;
-    }
-
-    .indautor-chat-input {
-      flex: 1;
-      font-size: 13px;
-      padding: 7px 9px;
-      border-radius: 999px;
-      border: 1px solid #c3c9d3;
-      outline: none;
-    }
-
-    .indautor-chat-input:focus {
-      border-color: #004b8d;
-    }
-
-    .indautor-chat-send {
-      border: none;
-      border-radius: 999px;
-      padding: 6px 12px;
-      font-size: 13px;
-      cursor: pointer;
-      background: #004b8d;
-      color: #fff;
-    }
-  `;
-  document.head.appendChild(style);
-
-  /* ============================================================
-     CREACIÓN DEL BOTÓN, TOOLTIP Y CHAT
-     ============================================================ */
-  const root = document.getElementById("indautor-chat-widget-root") || document.body;
-
-  // Botón
-  const btn = document.createElement("button");
-  btn.className = "indautor-chat-btn";
-  btn.innerHTML = ""; // la imagen es el fondo
-
-  // Tooltip
-  const tooltip = document.createElement("div");
-  tooltip.className = "indarelin-tooltip";
-  tooltip.textContent = "Asistente INDARELÍN";
-
-  // Ventana del chat
-  const win = document.createElement("div");
-  win.className = "indautor-chat-window";
-  win.style.display = "none";
-
-  win.innerHTML = `
-    <div class="indautor-chat-header">
-      <button class="indautor-chat-close" aria-label="Cerrar">×</button>
-      <div class="indautor-chat-header-title">Asistente INDARELÍN</div>
-      <div class="indautor-chat-header-subtitle">Información orientativa</div>
-      <div class="indautor-chat-badge">Demo no oficial</div>
-    </div>
-    <div class="indautor-chat-messages"></div>
-    <div class="indautor-chat-footer">
-      <input type="text" class="indautor-chat-input" placeholder="Escribe tu pregunta..." />
-      <button class="indautor-chat-send">Enviar</button>
-    </div>
-  `;
-
-  // Agregar al DOM
-  root.appendChild(btn);
-  root.appendChild(tooltip);
-  root.appendChild(win);
-
-  /* ============================================================
-     LÓGICA DEL CHAT
-     ============================================================ */
-  const msgContainer = win.querySelector(".indautor-chat-messages");
-  const input = win.querySelector(".indautor-chat-input");
-  const sendBtn = win.querySelector(".indautor-chat-send");
-  const closeBtn = win.querySelector(".indautor-chat-close");
-
-  let history = [];
-
-  function addMessage(text, from) {
-    const div = document.createElement("div");
-    div.className = "indautor-msg " + (from === "user" ? "indautor-msg-user" : "indautor-msg-bot");
-    div.textContent = text;
-    msgContainer.appendChild(div);
-    msgContainer.scrollTop = msgContainer.scrollHeight;
-  }
-
-  async function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
-
-    addMessage(text, "user");
-    history.push({ role: "user", content: text });
-    input.value = "";
-
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history })
-      });
-
-      const data = await res.json();
-      addMessage(data.reply, "bot");
-      history.push({ role: "assistant", content: data.reply });
-    } catch {
-      addMessage("Error al conectar con el servidor.", "bot");
-    }
-  }
-
-  // EVENTOS
-  btn.onclick = () => {
-    win.style.display = win.style.display === "none" ? "flex" : "none";
-  };
-
-  closeBtn.onclick = () => (win.style.display = "none");
-
-  sendBtn.onclick = sendMessage;
-
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") sendMessage();
-  });
-
-})();
-</script>
+  })();
+  </script>
 </body>
 </html>
