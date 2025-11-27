@@ -1,7 +1,7 @@
 {
   "name": "indautor-chatbot",
   "version": "1.0.0",
-  "description": "Chatbot demo INDAUTOR para utneza.store",
+  "description": "Chatbot INDAUTOR con panel admin para utneza.store",
   "main": "server.js",
   "type": "module",
   "scripts": {
