@@ -17,13 +17,13 @@ const __dirname = path.dirname(__filename);
 // CORS
 app.use(
   cors({
-    origin: "*", // luego puedes limitar a ["https://utneza.store"]
+    origin: "*", // luego puedes cambiar a ["https://utneza.store"]
   })
 );
 
 app.use(express.json());
 
-// Archivos estáticos desde /public
+// Archivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
 
 // Cliente OpenAI
@@ -31,40 +31,39 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Prompt del asistente
+// Prompt
 const SYSTEM_PROMPT = `
 Eres el asistente virtual de un demo orientado a INDAUTOR y al sitio utneza.store.
 Respondes SIEMPRE en ESPAÑOL, con tono profesional, amable y claro.
 
 Funciones principales:
-- Orientar al usuario sobre temas generales de derechos de autor (de forma NO oficial).
-- Responder dudas generales sobre el contenido de utneza.store.
-- Explicar conceptos de manera sencilla.
+- Orientar al usuario sobre derechos de autor (NO información oficial).
+- Responder dudas generales sobre contenidos del sitio utneza.store.
+- Explicar conceptos sencillos.
 
 Límites:
 - No das asesoría legal vinculante.
-- No representas a INDAUTOR ni sustituyes a un abogado.
-- Si el usuario requiere trámites oficiales o información con validez legal,
-  indícale que consulte directamente los canales oficiales de INDAUTOR.
+- No representas a INDAUTOR.
+- Si el usuario necesita trámites oficiales, indícalo claramente.
 `;
 
-// Log simple en memoria (demo)
+// LOG EN MEMORIA
 const chatLog = []; // { timestamp, message, reply }
 
-// Home simple
+// GET /
 app.get("/", (req, res) => {
   res.json({ ok: true, message: "Servidor INDAUTOR chatbot en línea 🚀" });
 });
 
-// GET /chat solo informativo
+// GET /chat simple
 app.get("/chat", (req, res) => {
   res.json({
     ok: true,
-    message: "Este endpoint acepta POST con JSON para conversar con el chatbot 🙂",
+    message: "Este endpoint acepta POST para conversar con el chatbot.",
   });
 });
 
-// Endpoint principal del chatbot
+// POST /chat
 app.post("/chat", async (req, res) => {
   try {
     const { message, history = [] } = req.body;
@@ -75,63 +74,69 @@ app.post("/chat", async (req, res) => {
         .json({ error: "Falta el campo 'message' en el cuerpo de la petición." });
     }
 
-    console.log("🔹 Solicitud a /chat:", {
-      message,
-      historyLength: Array.isArray(history) ? history.length : 0,
-    });
-
     const openaiResponse = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        ...(Array.isArray(history) ? history : []),
+        ...history,
         { role: "user", content: message },
       ],
     });
 
     const reply =
       openaiResponse.choices?.[0]?.message?.content ||
-      "Lo siento, no pude generar una respuesta en este momento.";
+      "Lo siento, no pude generar respuesta.";
 
+    // Nuevo historial
     const newHistory = [
-      ...(Array.isArray(history) ? history : []),
+      ...history,
       { role: "user", content: message },
       { role: "assistant", content: reply },
     ];
 
-    // Guardar en log (máx 500 registros)
+    // Guardar en log
     chatLog.push({
       timestamp: new Date().toISOString(),
       message,
       reply,
     });
-    if (chatLog.length > 500) {
-      chatLog.shift();
-    }
 
-    return res.json({
-      reply,
-      history: newHistory,
-    });
+    if (chatLog.length > 500) chatLog.shift(); // límite
+
+    return res.json({ reply, history: newHistory });
   } catch (error) {
-    console.error("❌ Error en /chat:", error?.response?.data || error.message || error);
-    return res.status(500).json({
-      error: "Error interno en el servidor",
-      details: error?.message || "Sin detalles",
-    });
+    console.error("❌ Error en /chat:", error.message || error);
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 });
 
-// Endpoint de estadísticas para el admin
+// GET /stats con filtro por fecha
 app.get("/stats", (req, res) => {
-  const totalMensajes = chatLog.length;
-  const ultimos = chatLog.slice(-20).reverse(); // últimos 20, más recientes primero
+  const { start, end } = req.query;
 
-  // Conteo muy simple por hora (para la gráfica)
+  let filtered = [...chatLog];
+
+  // Filtrar desde
+  if (start) {
+    const startDate = new Date(start + "T00:00:00Z");
+    filtered = filtered.filter(
+      (item) => new Date(item.timestamp) >= startDate
+    );
+  }
+
+  // Filtrar hasta
+  if (end) {
+    const endDate = new Date(end + "T23:59:59Z");
+    filtered = filtered.filter((item) => new Date(item.timestamp) <= endDate);
+  }
+
+  const totalMensajes = filtered.length;
+  const ultimos = filtered.slice(-20).reverse();
+
   const porHora = {};
-  chatLog.forEach((item) => {
+  filtered.forEach((item) => {
     const date = new Date(item.timestamp);
-    const key = date.toISOString().slice(0, 13) + ":00"; // YYYY-MM-DDTHH:00
+    const key = date.toISOString().slice(0, 13) + ":00";
     porHora[key] = (porHora[key] || 0) + 1;
   });
 
@@ -145,11 +150,12 @@ app.get("/stats", (req, res) => {
       labels: etiquetas,
       data: valores,
     },
+    filtro: { start: start || null, end: end || null },
   });
 });
 
-// Puerto
+// PUERTO
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`✅ Servidor escuchando en el puerto ${PORT}`);
-});
+app.listen(PORT, () =>
+  console.log(`Servidor INDAUTOR chatbot en puerto ${PORT} 🔥`)
+);
