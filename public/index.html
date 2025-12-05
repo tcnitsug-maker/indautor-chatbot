@@ -1,476 +1,444 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UNIVERSIDAD TECNOLÓGICA DE VIRTUALIZACION</title>
-  <link rel="stylesheet" href="css/styles.css" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Asistente INDARELÍN</title>
+<style>
+/* Simple styles for the widget */
+#gemini-chatbot-widget {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 9999;
+  font-family: Arial, sans-serif;
+}
+#gemini-chat-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #0066cc;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  cursor: pointer;
+  color: white;
+  font-size: 24px;
+}
+#gemini-chat-window {
+  width: 320px;
+  max-height: 480px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+#chat-header {
+  background: #0466d9;
+  color: white;
+  padding: 10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+#chat-messages {
+  padding: 10px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  background: #f7f7f7;
+}
+.chat-message {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  max-width: 86%;
+}
+.user-msg {
+  align-self: flex-end;
+  background: #e1ffc7;
+}
+.bot-msg {
+  align-self: flex-start;
+  background: #ffffff;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+}
+#chat-input-area {
+  display:flex;
+  gap:6px;
+  padding: 10px;
+  background: #fff;
+}
+#chat-input {
+  flex:1;
+  padding:8px;
+  border-radius:6px;
+  border:1px solid #ddd;
+}
+#send-btn {
+  padding:8px 12px;
+  background:#0466d9;
+  color:white;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+</style>
 </head>
 <body>
-  <a class="skip-link" href="#contenido">Saltar al contenido principal</a>
-  <header class="site-header">
-    <div class="container header-inner">
-      <div class="logo-block">
-        <img src="img/logo-uv.svg" alt="Logo UNIVERSIDAD TECNOLÓGICA DE VIRTUALIZACION" class="logo-img" />
-        <div class="logo-text">
-          <span class="logo-name">UNIVERSIDAD TECNOLÓGICA DE VIRTUALIZACION</span>
-          <span class="logo-sub">Portal Institucional</span>
-        </div>
-      </div>
-      <nav class="main-nav" aria-label="Navegación principal">
-        <button class="nav-toggle" aria-expanded="false" aria-label="Abrir menú">☰</button>
-        <ul class="nav-list">
-          <li><a href="index.html">Inicio</a></li>
-          <li><a href="oferta.html">Oferta educativa</a></li>
-          <li><a href="alumnos.html">Alumnos</a></li>
-          <li><a href="docentes.html">Docentes</a></li>
-          <li><a href="tramites.html">Trámites y servicios</a></li>
-          <li><a href="convocatoria.html">Convocatoria</a></li>
-          <li><a href="preregistro.html">Pre-registro</a></li>
-          <li><a href="contacto.html">Contacto</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
+<div id="gemini-chatbot-widget"></div>
 
-  <main id="contenido">
-    <section class="hero">
-      <div class="container hero-inner">
-        <div class="hero-text">
-          <h1>UNIVERSIDAD TECNOLÓGICA DE VIRTUALIZACION</h1>
-          <p>
-            Portal institucional demostrativo para una universidad con enfoque
-            en tecnologías, virtualización y servicios en la nube.
-          </p>
-          <div class="hero-actions">
-            <a class="btn primary" href="oferta.html">Ver oferta educativa</a>
-            <a class="btn secondary" href="tramites.html">Trámites en línea</a>
-          </div>
-        </div>
-        <div class="hero-panel">
-          <h2>Accesos rápidos</h2>
-          <div class="quick-grid">
-            <a href="oferta.html" class="quick-card">
-              <h3>Oferta educativa</h3>
-              <p>Programas TSU, Ingeniería y Licenciatura.</p>
-            </a>
-            <a href="convocatoria.html" class="quick-card">
-              <h3>Convocatoria</h3>
-              <p>Consulta las convocatorias vigentes.</p>
-            </a>
-            <a href="preregistro.html" class="quick-card">
-              <h3>Pre-registro</h3>
-              <p>Registra tus datos como aspirante.</p>
-            </a>
-            <a href="contacto.html" class="quick-card">
-              <h3>Contacto</h3>
-              <p>Comunícate con la universidad.</p>
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
+<script>
+// =========================================================
+// RESPUESTAS LOCALES (INDARELÍN / INDAUTOR)
+// =========================================================
 
-    <section class="highlight-section">
-      <div class="container section-inner">
-        <div class="section-header">
-          <h2>Calendario académico (ejemplo)</h2>
-          <p>Reemplaza esta información por el calendario oficial de tu institución.</p>
-        </div>
-        <div class="cards-row">
-          <article class="card">
-            <h3>Inicio de cuatrimestre</h3>
-            <p>Fecha de arranque de actividades escolares.</p>
-          </article>
-          <article class="card">
-            <h3>Período de reinscripción</h3>
-            <p>Ventana para reinscripción de alumnos regulares.</p>
-          </article>
-          <article class="card">
-            <h3>Evaluaciones parciales</h3>
-            <p>Fechas sugeridas para exámenes y proyectos.</p>
-          </article>
-        </div>
-      </div>
-    </section>
+const PRECONFIGURED_ANSWERS = {
+  "tiempo registro obra":
+    "El registro de una obra tarda aproximadamente 15 días hábiles una vez firmada la solicitud en INDARELÍN.",
 
-    <section class="section-alt">
-      <div class="container section-inner two-cols">
-        <div>
-          <h2>Acerca de la universidad</h2>
-          <p>
-            La Universidad Tecnológica de Virtualizacion es un concepto demostrativo
-            orientado al desarrollo de competencias en tecnologías de la información,
-            redes, ciberseguridad y servicios en la nube.
-          </p>
-          <p>
-            Utiliza esta plantilla como base para publicar misión, visión, valores,
-            historia y datos institucionales reales.
-          </p>
-        </div>
-        <aside class="info-panel">
-          <h3>Enfoque académico</h3>
-          <ul>
-            <li>Formación tecnológica actualizada.</li>
-            <li>Proyectos vinculados con la industria.</li>
-            <li>Énfasis en prácticas y laboratorios virtuales.</li>
-          </ul>
-        </aside>
-      </div>
-    </section>
-  </main>
+  "registro obra sigue proceso":
+    "El plazo de respuesta es de hasta 15 días hábiles. A veces tarda menos, pero depende de la carga de trabajo de INDAUTOR.",
 
-  <footer class="site-footer">
-    <div class="container footer-inner">
-      <section>
-        <h3>Enlaces de interés</h3>
-        <ul>
-          <li><a href="#">Portal estatal (ejemplo)</a></li>
-          <li><a href="#">Transparencia (ejemplo)</a></li>
-        </ul>
-      </section>
-      <section>
-        <h3>Acerca del sitio</h3>
-        <ul>
-          <li><a href="#">Mapa de sitio</a></li>
-          <li><a href="#">Aviso de privacidad</a></li>
-          <li><a href="#">Términos de uso</a></li>
-        </ul>
-      </section>
-      <section>
-        <h3>Contacto</h3>
-        <p>UNIVERSIDAD TECNOLÓGICA DE VIRTUALIZACION</p>
-        <p>Portal demostrativo sin carácter oficial.</p>
-      </section>
-    </div>
-    <div class="footer-bottom">
-      <span>© 2025 UNIVERSIDAD TECNOLÓGICA DE VIRTUALIZACIONES.</span>
-    </div>
-  </footer>
+  "reservas derechos":
+    "Las reservas de derechos permiten proteger nombres, títulos y personajes de publicaciones periódicas o difusiones continuas.",
 
-  <!-- Widget INDARELÍN -->
-  <div id="indautor-chat-widget-root"></div>
+  "costo registro obra":
+    "El costo actual del registro de obra es de $353 MXN. Verifique siempre las tarifas actualizadas en el portal oficial de INDAUTOR.",
 
-  <script>
-  (function () {
-    const API_URL = "https://indautor-chatbot-1.onrender.com/chat";
+  "documentos registro obra":
+    "Requisitos generales: Formato de solicitud INDAUTOR, comprobante de pago e identificación oficial vigente.",
 
-    /* ============================================================
-       ESTILOS PRO DEL BOTÓN + TOOLTIP + CHAT WINDOW
-       ============================================================ */
-    const style = document.createElement("style");
-    style.innerHTML = `
-      /* === Botón PRO con logo INDARELÍN === */
-      .indautor-chat-btn {
-        position: fixed;
-        bottom: 22px;
-        right: 22px;
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        cursor: pointer;
-        border: none;
-        background: linear-gradient(135deg, #ffffff 0%, #ffffff 40%, #e6e6e6 100%);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-        z-index: 9999;
-        transition: all 0.25s ease-out;
+  "que es indarelin":
+    "INDARELÍN es la plataforma electrónica de INDAUTOR para realizar trámites de derechos de autor en línea.",
 
-        background-image: url("img/indarelin.png");
-        background-size: 80%;
-        background-repeat: no-repeat;
-        background-position: center;
+  "certificado no coincide firmante":
+    "Si ya generaste la línea de captura y el certificado no coincide con el firmante, no se puede corregir sobre el mismo trámite. Debes iniciar uno nuevo y, en su caso, solicitar la devolución del pago anterior.",
 
-        border: 3px solid transparent;
-        background-clip: padding-box;
+  "contraseñas no coinciden":
+    "Debes usar la contraseña de tu e.firma (FIEL). Puedes validar su vigencia en el portal del SAT.",
 
-        animation: indarelinPulse 2.6s infinite ease-in-out;
-      }
+  "no llega correo activacion":
+    "Revisa la bandeja de spam o correo no deseado. El correo de activación o acuse a veces llega ahí.",
 
-      /* Hover elegante */
-      .indautor-chat-btn:hover {
-        transform: scale(1.08) translateY(-4px);
-        box-shadow: 0 10px 28px rgba(0,0,0,0.3);
-        border-color: #004b8d;
-      }
+  "escribi mal rfc":
+    "Si escribiste mal el RFC y ya generaste la línea de captura en INDARELÍN, deberás iniciar nuevamente el trámite y solicitar la devolución del pago si corresponde."
+};
 
-      /* Animación pulse PRO */
-      @keyframes indarelinPulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.055); }
-        100% { transform: scale(1); }
-      }
 
-      /* === Tooltip PRO === */
-      .indarelin-tooltip {
-        position: fixed;
-        bottom: 105px;
-        right: 25px;
-        background: #004b8d;
-        color: #ffffff;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-size: 12px;
-        white-space: nowrap;
-        opacity: 0;
-        pointer-events: none;
-        transform: translateY(6px);
-        transition: all 0.25s ease;
-        z-index: 9999;
-        box-shadow: 0 4px 18px rgba(0,0,0,0.28);
-      }
+// =========================================================
+// INTENTOS ESPECIALES (MOTOR DE INTENCIÓN SIMPLE)
+// =========================================================
 
-      .indarelin-tooltip::after {
-        content: "";
-        position: absolute;
-        bottom: -6px;
-        right: 18px;
-        border-width: 6px;
-        border-style: solid;
-        border-color: #004b8d transparent transparent transparent;
-      }
+const INTENTS = [
+  {
+    id: "doble_pago",
+    keywords: ["pague dos veces", "pagué dos veces", "pague doble", "pagué doble", "doble pago"],
+    answer:
+      "Si realizaste el pago dos veces (doble pago), conserva ambos comprobantes. Normalmente debes:\n\n" +
+      "1) Continuar el trámite con el pago correcto.\n" +
+      "2) Solicitar la devolución del pago duplicado por los canales oficiales de INDAUTOR (área de devoluciones).\n\n" +
+      "Verifica en el portal o en la información oficial el procedimiento específico para devoluciones."
+  },
+  {
+    id: "problema_efirma",
+    keywords: ["problema con e.firma", "problema con efirma", "no acepta efirma", "no reconoce mi efirma", "no reconoce mi e firma"],
+    answer:
+      "Si tienes problemas con tu e.firma en INDARELÍN, revisa lo siguiente:\n\n" +
+      "1) Que los archivos .cer y .key sean los vigentes.\n" +
+      "2) Que la contraseña que ingresas sea la de la e.firma (FIEL), respetando mayúsculas/minúsculas.\n" +
+      "3) Que tu e.firma no esté revocada o vencida; puedes validarla en el portal del SAT.\n\n" +
+      "Si el problema persiste, toma captura del mensaje de error y contacta a INDAUTOR por los canales oficiales."
+  },
+  {
+    id: "no_puedo_subir_archivo",
+    keywords: ["no puedo subir archivo", "no me deja subir archivo", "error al subir archivo", "problema al subir archivo"],
+    answer:
+      "Si INDARELÍN no te permite subir un archivo, prueba lo siguiente:\n\n" +
+      "1) Verifica que el formato del archivo sea el permitido (por ejemplo, PDF u otro especificado en el trámite).\n" +
+      "2) Revisa que el tamaño no exceda el límite indicado en la plataforma.\n" +
+      "3) Cambia de navegador (Chrome, Edge, Firefox) y borra caché si es posible.\n" +
+      "4) Intenta renombrar el archivo sin caracteres especiales.\n\n" +
+      "Si el problema continúa, toma captura del error y repórtalo a soporte de INDARELÍN."
+  },
+  {
+    id: "error_pdf",
+    keywords: ["error en pdf", "pdf da error", "no abre mi pdf", "problema con pdf", "no se ve el pdf"],
+    answer:
+      "Si tienes un error con el PDF en INDARELÍN, considera lo siguiente:\n\n" +
+      "1) Abre el PDF en tu equipo para confirmar que no esté dañado.\n" +
+      "2) Genera el PDF nuevamente desde la fuente original (Word, escáner, etc.) usando una resolución legible pero no excesiva.\n" +
+      "3) Verifica que el tamaño del archivo no exceda el límite permitido.\n" +
+      "4) Evita contraseñas o bloqueos en el PDF.\n\n" +
+      "Si aún así marca error en la plataforma, guarda captura de pantalla y repórtalo a soporte de INDARELÍN."
+  }
+];
 
-      .indautor-chat-btn:hover + .indarelin-tooltip {
-        opacity: 1;
-        transform: translateY(0);
-      }
 
-      /* === Ventana del chat === */
-      .indautor-chat-window {
-        position: fixed;
-        bottom: 105px;
-        right: 22px;
-        width: 360px;
-        max-width: 95vw;
-        height: 480px;
-        max-height: 75vh;
-        background: #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        z-index: 9999;
-        font-family: system-ui;
-      }
+// =========================================================
+// CONFIGURACIONES DE IA
+// =========================================================
 
-      .indautor-chat-header {
-        padding: 10px 14px;
-        background: #004b8d;
-        color: #ffffff;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        position: relative;
-      }
+// URL de tu backend para INDARELÍN
+const GEMINI_API_ENDPOINT = "https://indautor-chatbot-1.onrender.com/chat";
+const OPENAI_API_ENDPOINT = ""; // si no usas OpenAI, déjalo vacío.
 
-      .indautor-chat-header-title {
-        font-size: 14px;
-        font-weight: 600;
-      }
 
-      .indautor-chat-header-subtitle {
-        font-size: 11px;
-        opacity: 0.9;
-      }
+// =========================================================
+// FUNCIONES DE SOPORTE
+// =========================================================
 
-      .indautor-chat-badge {
-        font-size: 9px;
-        opacity: 0.8;
-        margin-top: 2px;
-      }
+function normalize(text) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
 
-      .indautor-chat-close {
-        position: absolute;
-        top: 6px;
-        right: 8px;
-        background: transparent;
-        border: none;
-        color: #fff;
-        cursor: pointer;
-        font-size: 16px;
-      }
+function similarity(a, b) {
+  const longer = a.length > b.length ? a : b;
+  const shorter = a.length > b.length ? b : a;
+  const longerLength = longer.length;
+  if (longerLength === 0) return 1.0;
+  return (longerLength - editDistance(longer, shorter)) / longerLength;
+}
 
-      .indautor-chat-messages {
-        flex: 1;
-        padding: 10px;
-        overflow-y: auto;
-        background: #f4f6f9;
-        font-size: 13px;
-      }
-
-      .indautor-msg {
-        margin-bottom: 8px;
-        max-width: 90%;
-        padding: 8px 10px;
-        border-radius: 10px;
-        line-height: 1.4;
-        white-space: pre-wrap;
-      }
-
-      .indautor-msg-user {
-        background: #e1f0ff;
-        margin-left: auto;
-        border-bottom-right-radius: 2px;
-      }
-
-      .indautor-msg-bot {
-        background: #ffffff;
-        margin-right: auto;
-        border-bottom-left-radius: 2px;
-      }
-
-      .indautor-chat-footer {
-        padding: 8px;
-        border-top: 1px solid #dde3ea;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        background: #fff;
-      }
-
-      .indautor-chat-input {
-        flex: 1;
-        font-size: 13px;
-        padding: 7px 9px;
-        border-radius: 999px;
-        border: 1px solid #c3c9d3;
-        outline: none;
-      }
-
-      .indautor-chat-input:focus {
-        border-color: #004b8d;
-      }
-
-      .indautor-chat-send {
-        border: none;
-        border-radius: 999px;
-        padding: 6px 12px;
-        font-size: 13px;
-        cursor: pointer;
-        background: #004b8d;
-        color: #fff;
-        align-self: flex-end;
-      }
-
-      /* Hint de idiomas debajo del input */
-      .indautor-lang-hint {
-        font-size: 11px;
-        color: #555;
-        margin-top: 4px;
-        padding: 5px 8px;
-        background: #f4f4f4;
-        border-left: 3px solid #004b8d;
-        border-radius: 4px;
-        line-height: 1.4;
-      }
-    `;
-    document.head.appendChild(style);
-
-    /* ============================================================
-       CREACIÓN DEL BOTÓN, TOOLTIP Y CHAT
-       ============================================================ */
-    const root = document.getElementById("indautor-chat-widget-root") || document.body;
-
-    // Botón
-    const btn = document.createElement("button");
-    btn.className = "indautor-chat-btn";
-    btn.innerHTML = ""; // la imagen es el fondo
-
-    // Tooltip
-    const tooltip = document.createElement("div");
-    tooltip.className = "indarelin-tooltip";
-    tooltip.textContent = "Asistente INDARELÍN";
-
-    // Ventana del chat
-    const win = document.createElement("div");
-    win.className = "indautor-chat-window";
-    win.style.display = "none";
-
-    win.innerHTML = `
-      <div class="indautor-chat-header">
-        <button class="indautor-chat-close" aria-label="Cerrar">×</button>
-        <div class="indautor-chat-header-title">Asistente INDARELÍN</div>
-        <div class="indautor-chat-header-subtitle">Información orientativa</div>
-        <div class="indautor-chat-badge">Demo no oficial</div>
-      </div>
-      <div class="indautor-chat-messages"></div>
-      <div class="indautor-chat-footer">
-        <input type="text" class="indautor-chat-input" placeholder="Escribe tu pregunta..." />
-        <button class="indautor-chat-send">Enviar</button>
-      </div>
-    `;
-
-    /* === Hint de idiomas debajo del input === */
-    const langHint = document.createElement("p");
-    langHint.className = "indautor-lang-hint";
-    langHint.innerHTML = `
-      You can ask in English, or say:<br>
-      – "Answer in English"<br>
-      – "Responde en náhuatl"<br>
-      – "Answer in English and Nahuatl"
-    `;
-    win.querySelector(".indautor-chat-footer").appendChild(langHint);
-
-    // Agregar al DOM
-    root.appendChild(btn);
-    root.appendChild(tooltip);
-    root.appendChild(win);
-
-    /* ============================================================
-       LÓGICA DEL CHAT
-       ============================================================ */
-    const msgContainer = win.querySelector(".indautor-chat-messages");
-    const input = win.querySelector(".indautor-chat-input");
-    const sendBtn = win.querySelector(".indautor-chat-send");
-    const closeBtn = win.querySelector(".indautor-chat-close");
-
-    let history = [];
-
-    function addMessage(text, from) {
-      const div = document.createElement("div");
-      div.className = "indautor-msg " + (from === "user" ? "indautor-msg-user" : "indautor-msg-bot");
-      div.textContent = text;
-      msgContainer.appendChild(div);
-      msgContainer.scrollTop = msgContainer.scrollHeight;
-    }
-
-    async function sendMessage() {
-      const text = input.value.trim();
-      if (!text) return;
-
-      addMessage(text, "user");
-      history.push({ role: "user", content: text });
-      input.value = "";
-
-      try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text, history })
-        });
-
-        const data = await res.json();
-        addMessage(data.reply, "bot");
-        history.push({ role: "assistant", content: data.reply });
-      } catch {
-        addMessage("Error al conectar con el servidor.", "bot");
+function editDistance(s1, s2) {
+  s1 = s1.toLowerCase();
+  s2 = s2.toLowerCase();
+  const costs = [];
+  for (let i = 0; i <= s1.length; i++) {
+    let lastValue = i;
+    for (let j = 0; j <= s2.length; j++) {
+      if (i === 0) {
+        costs[j] = j;
+      } else if (j > 0) {
+        let newValue = costs[j - 1];
+        if (s1[i - 1] !== s2[j - 1]) {
+          newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+        }
+        costs[j - 1] = lastValue;
+        lastValue = newValue;
       }
     }
+    costs[s2.length] = lastValue;
+  }
+  return costs[s2.length];
+}
 
-    // EVENTOS
-    btn.onclick = () => {
-      win.style.display = win.style.display === "none" ? "flex" : "none";
-    };
 
-    closeBtn.onclick = () => (win.style.display = "none");
+// =========================================================
+// MOTOR DE INTENCIÓN
+// =========================================================
 
-    sendBtn.onclick = sendMessage;
+function getIntentAnswer(message) {
+  const normalizedMsg = normalize(message);
 
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") sendMessage();
+  let bestIntent = null;
+  let bestScore = 0;
+
+  for (const intent of INTENTS) {
+    let hits = 0;
+    for (const kw of intent.keywords) {
+      const nk = normalize(kw);
+      if (normalizedMsg.includes(nk)) {
+        hits++;
+      }
+    }
+    const score = hits / intent.keywords.length;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIntent = intent;
+    }
+  }
+
+  // Umbral muy bajo para que con que pegue 1–2 palabras ya responda
+  if (bestIntent && bestScore > 0) {
+    return bestIntent.answer;
+  }
+
+  return null;
+}
+
+
+// =========================================================
+// RESPUESTA LOCAL MEJORADA
+// =========================================================
+
+function getLocalAnswer(message) {
+  const normalizedMsg = normalize(message);
+  const msgTokens = normalizedMsg.split(/\s+/).filter(Boolean);
+
+  let bestKey = null;
+  let bestScore = 0;
+
+  for (let key in PRECONFIGURED_ANSWERS) {
+    const normalizedKey = normalize(key);
+    const keyTokens = normalizedKey.split(/\s+/).filter(Boolean);
+
+    // Coincidencia por palabras clave
+    let hits = 0;
+    for (const token of keyTokens) {
+      if (normalizedMsg.includes(token)) hits++;
+    }
+    const tokenScore = hits / keyTokens.length;
+
+    // Similitud adicional
+    const levScore = similarity(normalizedMsg, normalizedKey);
+
+    // Peso combinado
+    const finalScore = (tokenScore * 0.7) + (levScore * 0.3);
+
+    if (finalScore > bestScore) {
+      bestScore = finalScore;
+      bestKey = key;
+    }
+  }
+
+  // Acepta si coincide al menos 0.5 (ajustable)
+  if (bestScore >= 0.5) {
+    return PRECONFIGURED_ANSWERS[bestKey];
+  }
+
+  return null;
+}
+
+
+// =========================================================
+// LLAMADAS IA (BACKEND INDARELÍN)
+// =========================================================
+
+async function getGeminiAnswer(message) {
+  try {
+    const response = await fetch(GEMINI_API_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message })
     });
 
-  })();
-  </script>
+    if (!response.ok) {
+      return "🤖 Error conectando con el servidor del Asistente INDARELÍN.";
+    }
+
+    const data = await response.json();
+    return `🤖 ${data.reply}`;
+  } catch (error) {
+    return "🤖 El servicio del Asistente INDARELÍN no está disponible por el momento.";
+  }
+}
+
+
+// =========================================================
+// CHATBOT COMPLETO
+// =========================================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  const root = document.getElementById("gemini-chatbot-widget");
+
+  // Botón flotante
+  const btn = document.createElement("button");
+  btn.id = "gemini-chat-btn";
+  btn.innerHTML = "💬";
+  root.appendChild(btn);
+
+  const win = document.createElement("div");
+  win.id = "gemini-chat-window";
+  win.style.display = "none";
+  win.innerHTML = `
+    <div id="chat-header">
+      <span>Asistente INDARELÍN</span>
+      <button id="close-chat-btn">×</button>
+    </div>
+    <div id="chat-messages"></div>
+    <div id="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Preguntas sobre INDARELÍN o trámites de INDAUTOR...">
+      <button id="send-btn">Enviar</button>
+    </div>
+  `;
+  root.appendChild(win);
+
+  const msgContainer = win.querySelector("#chat-messages");
+  const inputField = win.querySelector("#chat-input");
+  const sendBtn = win.querySelector("#send-btn");
+  const closeBtn = win.querySelector("#close-chat-btn");
+
+  let isTyping = false;
+
+  btn.onclick = () => {
+    win.style.display = (win.style.display === "none") ? "flex" : "none";
+    if (win.style.display === "flex" && msgContainer.children.length === 0) {
+      addMessage("¡Hola! Soy el Asistente INDARELÍN. Puedo orientarte sobre trámites en línea de INDAUTOR. ¿En qué puedo ayudarte?", "bot");
+    }
+    inputField.focus();
+  };
+
+  closeBtn.onclick = () => win.style.display = "none";
+
+  function addMessage(text, from) {
+    const div = document.createElement("div");
+    div.className = `chat-message ${from}-msg`;
+    div.textContent = text;
+    msgContainer.appendChild(div);
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+  }
+
+  function setTyping(state) {
+    isTyping = state;
+    sendBtn.disabled = state;
+    inputField.disabled = state;
+
+    if (state) {
+      const div = document.createElement("div");
+      div.className = "chat-message bot-msg typing-indicator";
+      div.textContent = "Escribiendo...";
+      msgContainer.appendChild(div);
+    } else {
+      const ind = msgContainer.querySelector(".typing-indicator");
+      if (ind) ind.remove();
+    }
+  }
+
+  inputField.addEventListener("keydown", e => {
+    if (e.key === "Enter") handleUserInput();
+  });
+
+  sendBtn.onclick = handleUserInput;
+
+  async function handleUserInput() {
+    if (isTyping) return;
+
+    const userMessage = inputField.value.trim();
+    if (!userMessage) return;
+
+    addMessage(userMessage, "user");
+    inputField.value = "";
+    setTyping(true);
+
+    // 0. Motor de intención (casos especiales: doble pago, e.firma, archivo, pdf)
+    const intent = getIntentAnswer(userMessage);
+    if (intent) {
+      setTyping(false);
+      addMessage(intent, "bot");
+      return;
+    }
+
+    // 1. Respuesta local genérica
+    const local = getLocalAnswer(userMessage);
+    if (local) {
+      setTyping(false);
+      addMessage(local, "bot");
+      return;
+    }
+
+    // 2. Llamar al backend INDARELÍN
+    const aiResp = await getGeminiAnswer(userMessage);
+
+    setTyping(false);
+    addMessage(aiResp, "bot");
+  }
+});
+</script>
+
 </body>
 </html>
