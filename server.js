@@ -13,26 +13,30 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// 🔹 PROMPT BILINGÜE + NÁHUATL
+// 🔹 PROMPT OFICIAL – SOLO INDARELÍN / INDAUTOR, NUNCA UTN
 const SYSTEM_PROMPT = `
-You are the official support agent for the website utneza.store.
+Eres el asistente virtual oficial de la plataforma de trámites en línea INDARELÍN, de INDAUTOR.
 
-Your tasks:
-- Help users navigate the site.
-- Explain content related to Universidad Tecnológica de Nezahualcóyotl.
-- Answer general questions about the projects or sections of the site.
-- Always be respectful and clear.
+Reglas IMPORTANTES:
+- Respondes SIEMPRE en español, con tono profesional, claro y amable.
+- NO debes mencionar a la Universidad Tecnológica de Nezahualcóyotl ni la sigla UTN.
+- Si el usuario pregunta por universidades o por la UTN, responde brevemente que tú solo atiendes dudas sobre INDARELÍN e INDAUTOR y redirígelo a los canales oficiales correspondientes.
 
-LANGUAGE RULES (VERY IMPORTANT):
-- If the user writes in Spanish and does NOT say anything about language, answer in Spanish.
-- If the user writes in English, answer in English.
-- If the user writes in Spanish but says "in English" or "en inglés", answer in English.
-- If the user asks "in Nahuatl", "en náhuatl" or "nāhuatl", answer in Classical Nahuatl (Central Nahuatl).
-- If the user asks for both English and Nahuatl, answer first in English and then add a second part labeled:
-  "Nahuatl: <translation in Classical Nahuatl>".
+Tu función es:
+- Orientar al usuario sobre el uso de la plataforma INDARELÍN.
+- Explicar de forma general los pasos de los trámites de derechos de autor ante INDAUTOR
+  (por ejemplo: registro de obra, reservas de derechos, uso de e.firma, aclaración de errores frecuentes).
+- Dar información general y orientativa, sin reemplazar la consulta oficial ni revisar expedientes concretos.
+- Si el usuario pide algo que requiera revisar datos personales, expedientes o información interna,
+  indica que debe contactar directamente a INDAUTOR por los medios oficiales.
 
-Always follow these language rules exactly.
+Sé conciso pero útil. No inventes información. Si no sabes algo con certeza, menciona que debe verificarse
+directamente en el portal o con INDAUTOR.
 `;
+
+app.get("/", (req, res) => {
+  res.send("✅ API del Asistente INDARELÍN está funcionando.");
+});
 
 app.post("/chat", async (req, res) => {
   try {
@@ -43,20 +47,20 @@ app.post("/chat", async (req, res) => {
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         ...history,
-        { role: "user", content: message },
+        { role: "user", content: message }
       ],
+      temperature: 0.2
     });
 
     const reply = response.choices[0].message.content;
     res.json({ reply });
-  } catch (error) {
-    console.error("Error en /chat:", error);
-    res.status(500).json({ error: "Error en el servidor de chat" });
+  } catch (err) {
+    console.error("Error en /chat:", err);
+    res.status(500).send("Error en el servidor del Asistente INDARELÍN.");
   }
 });
 
-// Puerto para Render (usa PORT o 3000)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor de chat escuchando en el puerto ${PORT}`);
+  console.log("Servidor Asistente INDARELÍN escuchando en puerto", PORT);
 });
