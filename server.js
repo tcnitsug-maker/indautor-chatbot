@@ -1,66 +1,68 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import OpenAI from "openai";
-
-dotenv.config();
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+require("dotenv").config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+// ------------------------------
+// 1. CONEXIÓN A MONGODB ATLAS
+// ------------------------------
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ Conectado a MongoDB Atlas"))
+  .catch(err => console.error("❌ Error al conectar MongoDB:", err));
+
+// ------------------------------
+// 2. MODELO PARA GUARDAR RESPUESTAS
+// ------------------------------
+const chatSchema = new mongoose.Schema({
+  userMessage: String,
+  botResponse: String,
+  timestamp: { type: Date, default: Date.now }
 });
 
-// 🔹 PROMPT OFICIAL – SOLO INDARELÍN / INDAUTOR, NUNCA UTN
-const SYSTEM_PROMPT = `
-Eres el asistente virtual oficial de la plataforma de trámites en línea INDARELÍN, de INDAUTOR.
+const ChatLog = mongoose.model("ChatLog", chatSchema);
 
-Reglas IMPORTANTES:
-- Respondes SIEMPRE en español, con tono profesional, claro y amable.
-- NO debes mencionar a la Universidad Tecnológica de Nezahualcóyotl ni la sigla UTN.
-- Si el usuario pregunta por universidades o por la UTN, responde brevemente que tú solo atiendes dudas sobre INDARELÍN e INDAUTOR y redirígelo a los canales oficiales correspondientes.
-
-Tu función es:
-- Orientar al usuario sobre el uso de la plataforma INDARELÍN.
-- Explicar de forma general los pasos de los trámites de derechos de autor ante INDAUTOR
-  (por ejemplo: registro de obra, reservas de derechos, uso de e.firma, aclaración de errores frecuentes).
-- Dar información general y orientativa, sin reemplazar la consulta oficial ni revisar expedientes concretos.
-- Si el usuario pide algo que requiera revisar datos personales, expedientes o información interna,
-  indica que debe contactar directamente a INDAUTOR por los medios oficiales.
-
-Sé conciso pero útil. No inventes información. Si no sabes algo con certeza, menciona que debe verificarse
-directamente en el portal o con INDAUTOR.
-`;
-
-app.get("/", (req, res) => {
-  res.send("✅ API del Asistente INDARELÍN está funcionando.");
-});
-
+// ------------------------------
+// 3. ENDPOINT DEL CHATBOT
+// ------------------------------
 app.post("/chat", async (req, res) => {
-  try {
-    const { message, history = [] } = req.body;
+  const { message } = req.body;
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...history,
-        { role: "user", content: message }
-      ],
-      temperature: 0.2
+  // Antes de mandar a la IA,
+  // Aquí puedes poner tus respuestas manuales si quieres:
+  if (message.toLowerCase().includes("hola")) {
+    const customResponse = "Hola, ¿en qué puedo ayudarte?";
+    
+    // Guardar en BD
+    await ChatLog.create({
+      userMessage: message,
+      botResponse: customResponse
     });
 
-    const reply = response.choices[0].message.content;
-    res.json({ reply });
+    return res.json({ type: "text", content: customResponse });
+  }
+
+  // Si no coincide, se envía a tu IA
+  try {
+    const aiReply = "Aquí llamas a la IA y devuelves su respuesta.";
+
+    // Guardar en BD
+    await ChatLog.create({
+      userMessage: message,
+      botResponse: aiReply
+    });
+
+    res.json({ type: "text", content: aiReply });
+
   } catch (err) {
-    console.error("Error en /chat:", err);
-    res.status(500).send("Error en el servidor del Asistente INDARELÍN.");
+    res.json({ type: "text", content: "Error procesando la solicitud." });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Servidor Asistente INDARELÍN escuchando en puerto", PORT);
+// ------------------------------
+app.listen(process.env.PORT, () => {
+  console.log(`🚀 Servidor corriendo en puerto ${process.env.PORT}`);
 });
