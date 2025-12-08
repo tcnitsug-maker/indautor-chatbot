@@ -26,15 +26,17 @@ const chatSchema = new mongoose.Schema({
 const ChatLog = mongoose.model("ChatLog", chatSchema);
 
 // ------------------------------
-// 3. ENDPOINT PARA EL CHATBOT
+// 3. ENDPOINT DEL CHATBOT
 // ------------------------------
 app.post("/chat", async (req, res) => {
   const { message } = req.body;
 
-  // RESPUESTAS MANUALES ANTES QUE LA IA
+  // Antes de mandar a la IA,
+  // Aquí puedes poner tus respuestas manuales si quieres:
   if (message.toLowerCase().includes("hola")) {
     const customResponse = "Hola, ¿en qué puedo ayudarte?";
-
+    
+    // Guardar en BD
     await ChatLog.create({
       userMessage: message,
       botResponse: customResponse
@@ -43,28 +45,24 @@ app.post("/chat", async (req, res) => {
     return res.json({ type: "text", content: customResponse });
   }
 
-  // Si no coincide mandas a la IA
-  const aiReply = "Aquí iría la respuesta de la IA.";
+  // Si no coincide, se envía a tu IA
+  try {
+    const aiReply = "Aquí llamas a la IA y devuelves su respuesta.";
 
-  await ChatLog.create({
-    userMessage: message,
-    botResponse: aiReply
-  });
+    // Guardar en BD
+    await ChatLog.create({
+      userMessage: message,
+      botResponse: aiReply
+    });
 
-  res.json({ type: "text", content: aiReply });
+    res.json({ type: "text", content: aiReply });
+
+  } catch (err) {
+    res.json({ type: "text", content: "Error procesando la solicitud." });
+  }
 });
 
 // ------------------------------
-// 4. ENDPOINT PARA LEER TODAS LAS RESPUESTAS (ADMIN PANEL)
-// ------------------------------
-app.get("/admin/responses", async (req, res) => {
-  const results = await ChatLog.find().sort({ timestamp: -1 });
-  res.json(results);
+app.listen(process.env.PORT, () => {
+  console.log(`🚀 Servidor corriendo en puerto ${process.env.PORT}`);
 });
-
-// ------------------------------
-// 5. LEVANTAR SERVIDOR
-// ------------------------------
-app.listen(process.env.PORT || 3000, () =>
-  console.log(`🚀 Servidor corriendo en puerto ${process.env.PORT || 3000}`)
-);
