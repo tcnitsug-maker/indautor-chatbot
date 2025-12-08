@@ -1,6 +1,0 @@
-/* Estilos base demo */
-body { margin: 0; font-family: system-ui, sans-serif; }
-.site-header, .site-footer { background:#111827; color:white; }
-.site-header a, .site-footer a { color:#e5e7eb; text-decoration:none; }
-.hero { padding:40px 0; background:#f3f4f6; }
-.container { max-width:1000px; margin:0 auto; padding:0 16px; }
