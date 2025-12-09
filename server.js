@@ -8,23 +8,24 @@ const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
-// CORS: permite llamadas desde tu dominio
-app.use(
-  cors({
-    origin: ["https://utneza.store", "https://www.utneza.store"],
-    methods: ["GET", "POST", "DELETE", "OPTIONS"],
-  })
-);
+// ====== CORS FIX DEFINITIVO ========
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "DELETE"],
+  allowedHeaders: ["Content-Type"],
+}));
 
 app.use(express.json());
 
-mongoose
-  .connect(process.env.MONGO_URI)
+// ====== MONGO ========
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Atlas conectado"))
-  .catch((err) => console.error("Error en MongoDB:", err));
+  .catch(err => console.error("Error en MongoDB:", err));
 
+// ====== RUTAS ========
 app.use("/chat", chatRoutes);
 app.use("/admin", adminRoutes);
 
+// ====== SERVIDOR ========
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log("Servidor iniciado en puerto " + PORT));
