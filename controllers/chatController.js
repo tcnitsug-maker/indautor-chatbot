@@ -2,7 +2,7 @@ const Message = require("../models/Message");
 const fetch = require("node-fetch");
 
 // Usa OpenAI API (model económico gpt-4.1-mini)
-const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_API_URL = "https://indautor-chatbot-1.onrender.com";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
 exports.sendChat = async (req, res) => {
