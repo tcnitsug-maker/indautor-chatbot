@@ -11,7 +11,7 @@ exports.sendChat = async (req, res) => {
 
     await Message.create({ role: "user", text: userMessage });
 
-    const url = `https://indautor-chatbot-1.onrender.com}`;
+    const url = `https://indautor-chatbot-1.onrender.com`;
 
     const body = {
       contents: [{ parts: [{ text: userMessage }] }]
