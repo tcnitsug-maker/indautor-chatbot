@@ -46,12 +46,12 @@ app.use("/admin", adminRoutes);
 app.use("/admin/custom-replies", customReplyRoutes);
 
 // --------------------
-// 🗂 Servir archivos estáticos (panel admin)
+// 🗂 Servir archivos estáticos del panel admin
 // --------------------
 app.use(express.static(path.join(__dirname, "public")));
 
 // --------------------
-// 🌐 Ruta del panel admin
+// 🌐 Ruta del panel administrativo
 // --------------------
 app.get("/admin-panel", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
