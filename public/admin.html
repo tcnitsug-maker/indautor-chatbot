@@ -3,775 +3,150 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Panel Administrativo - UTNEZA</title>
-  <style>
-    :root {
-      --primary: #1a73e8;
-      --primary-dark: #1558b0;
-      --bg: #f5f7fb;
-      --sidebar-bg: #ffffff;
-      --text-main: #202124;
-      --text-muted: #5f6368;
-      --border: #dadce0;
-      --danger: #d93025;
-      --success: #188038;
-    }
+  <title>Panel Administrativo - INDARELÍN</title>
 
-    * {
-      box-sizing: border-box;
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
       margin: 0;
       padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    body {
-      background: var(--bg);
-      color: var(--text-main);
-      height: 100vh;
-      display: flex;
-      align-items: stretch;
-      justify-content: center;
+    #loginBox, #panelBox {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.15);
     }
 
-    /* LOGIN VIEW */
-    #loginBox {
-      margin: auto;
-      max-width: 380px;
-      width: 100%;
-      background: #ffffff;
-      border-radius: 12px;
-      padding: 24px 28px 30px;
-      box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+    #panelBox { display: none; }
+
+    h2 {
+      margin-top: 0;
     }
 
-    #loginBox h2 {
-      font-size: 22px;
-      margin-bottom: 10px;
-      color: var(--text-main);
-    }
-
-    #loginBox p {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-bottom: 14px;
-    }
-
-    .input-group {
-      margin-bottom: 14px;
-    }
-
-    .input-group label {
-      display: block;
-      font-size: 13px;
-      margin-bottom: 4px;
-      color: var(--text-muted);
-    }
-
-    .input-group input {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      font-size: 14px;
-      outline: none;
-      transition: border 0.15s, box-shadow 0.15s;
-    }
-
-    .input-group input:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 1px rgba(26,115,232,0.15);
-    }
-
-    #loginError {
-      margin-top: 6px;
-      font-size: 13px;
-      color: var(--danger);
-    }
-
-    .btn-primary {
+    input[type="password"] {
       width: 100%;
       padding: 10px;
-      border-radius: 999px;
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      background: var(--primary);
-      color: #ffffff;
-      transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-dark);
-      box-shadow: 0 2px 6px rgba(26,115,232,0.35);
-    }
-
-    .btn-primary:active {
-      transform: scale(0.99);
-      box-shadow: none;
-    }
-
-    /* DASHBOARD LAYOUT */
-    #panelBox {
-      display: none;
-      width: 100%;
-    }
-
-    .layout {
-      display: flex;
-      width: 100%;
-      height: 100vh;
-    }
-
-    .sidebar {
-      width: 240px;
-      background: var(--sidebar-bg);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      padding: 16px 12px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px 14px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 12px;
-    }
-
-    .logo-circle {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-weight: 600;
-    }
-
-    .logo-text {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .logo-title {
-      font-size: 15px;
-      font-weight: 600;
-    }
-
-    .logo-subtitle {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    .nav-section-title {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-muted);
-      padding: 8px 10px 4px;
-    }
-
-    .nav-list {
-      list-style: none;
-      margin-top: 4px;
-    }
-
-    .nav-item {
-      margin-bottom: 4px;
-    }
-
-    .nav-link {
-      width: 100%;
-      text-align: left;
-      border-radius: 999px;
-      border: none;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      background: transparent;
-      cursor: pointer;
-      font-size: 13px;
-      color: var(--text-main);
-      transition: background 0.12s;
-    }
-
-    .nav-link span.icon {
-      font-size: 15px;
-      width: 18px;
-      text-align: center;
-    }
-
-    .nav-link.active {
-      background: rgba(26,115,232,0.12);
-      color: var(--primary-dark);
-    }
-
-    .nav-link:hover:not(.active) {
-      background: rgba(60,64,67,0.04);
-    }
-
-    .sidebar-footer {
-      margin-top: auto;
-      padding: 8px 10px 4px;
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    /* MAIN CONTENT */
-    .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-
-    .topbar {
-      height: 56px;
-      border-bottom: 1px solid var(--border);
-      background: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
-    }
-
-    .topbar-left {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .topbar-title {
-      font-size: 16px;
-      font-weight: 500;
-    }
-
-    .topbar-subtitle {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--success);
-    }
-
-    .main-content {
-      flex: 1;
-      padding: 16px 20px 20px;
-      overflow-y: auto;
-    }
-
-    .cards-row {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .card {
-      background: #ffffff;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      padding: 14px 14px 16px;
-      flex: 1;
-      min-width: 220px;
-    }
-
-    .card-title {
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 6px;
-    }
-
-    .card-value {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    .card-helper {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .section {
-      background: #ffffff;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      padding: 14px 14px 16px;
-      margin-bottom: 16px;
-    }
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      border-radius: 6px;
+      border: 1px solid #aaa;
       margin-bottom: 10px;
+      font-size: 16px;
     }
 
-    .section-title {
-      font-size: 15px;
-      font-weight: 500;
-    }
-
-    .section-subtitle {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .section-actions {
-      display: flex;
-      gap: 8px;
-      font-size: 12px;
-    }
-
-    .btn-ghost {
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #ffffff;
-      padding: 6px 10px;
-      font-size: 12px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      color: var(--text-main);
-    }
-
-    .btn-ghost:hover {
-      background: rgba(60,64,67,0.04);
-    }
-
-    .btn-danger {
-      border-radius: 999px;
+    button {
+      padding: 10px 20px;
+      background: #7A1731;
+      color: white;
+      border-radius: 6px;
       border: none;
-      background: rgba(217,48,37,0.1);
-      padding: 6px 10px;
-      font-size: 12px;
       cursor: pointer;
-      color: var(--danger);
+      font-size: 16px;
     }
 
-    .btn-danger:hover {
-      background: rgba(217,48,37,0.16);
-    }
-
-    /* TABLES */
-    .table-container {
-      width: 100%;
-      overflow-x: auto;
-      margin-top: 8px;
+    button:hover {
+      background: #5c0f24;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    thead {
-      background: #f8f9fd;
+      margin-top: 15px;
     }
 
     th, td {
-      padding: 8px 10px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid #ddd;
+      padding: 10px;
       text-align: left;
-      vertical-align: top;
-    }
-
-    th {
-      font-size: 12px;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      background: rgba(60,64,67,0.06);
-      color: var(--text-muted);
-    }
-
-    .badge-success {
-      background: rgba(24,128,56,0.12);
-      color: var(--success);
     }
 
     .deleteBtn {
-      border-radius: 999px;
-      border: none;
-      padding: 4px 8px;
-      font-size: 11px;
-      cursor: pointer;
-      background: rgba(217,48,37,0.06);
-      color: var(--danger);
-    }
-
-    .deleteBtn:hover {
-      background: rgba(217,48,37,0.16);
-    }
-
-    /* FORM CUSTOM REPLIES */
-    .form-grid {
-      display: grid;
-      gap: 10px;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      margin-top: 8px;
-      margin-bottom: 8px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 12px;
-      margin-bottom: 4px;
-      color: var(--text-muted);
-    }
-
-    .form-group input,
-    .form-group textarea {
-      width: 100%;
-      padding: 8px 9px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      font-size: 13px;
-      outline: none;
-      resize: vertical;
-      min-height: 38px;
-    }
-
-    .form-group textarea {
-      min-height: 60px;
-    }
-
-    .form-group input:focus,
-    .form-group textarea:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 1px rgba(26,115,232,0.15);
-    }
-
-    .form-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 10px;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .checkbox-inline {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .btn-secondary {
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #ffffff;
-      padding: 7px 14px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-
-    .btn-secondary:hover {
-      background: rgba(60,64,67,0.04);
-    }
-
-    .btn-save {
-      border-radius: 999px;
-      border: none;
-      background: var(--primary);
-      color: #fff;
-      padding: 8px 16px;
-      font-size: 13px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn-save:hover {
-      background: var(--primary-dark);
-    }
-
-    .section-config-note {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 6px;
-    }
-
-    @media (max-width: 800px) {
-      .sidebar {
-        display: none;
-      }
-      .layout {
-        flex-direction: column;
-      }
-      .topbar {
-        padding-inline: 12px;
-      }
-      .main-content {
-        padding-inline: 12px;
-      }
+      background: #c62828;
+      padding: 5px 12px;
+      border-radius: 6px;
+      color: white;
+      font-size: 14px;
     }
   </style>
 </head>
+
 <body>
 
-  <!-- LOGIN CARD -->
-  <div id="loginBox">
-    <h2>Acceso administrador</h2>
-    <p>Ingresa la contraseña de administración para gestionar conversaciones y respuestas personalizadas.</p>
+<div id="loginBox">
+  <h2>Acceso Administrador INDARELÍN</h2>
+  <p>Introduce la contraseña administrativa para acceder al panel.</p>
 
-    <div class="input-group">
-      <label for="adminPass">Contraseña</label>
-      <input type="password" id="adminPass" placeholder="Ingresa tu contraseña">
-    </div>
+  <input type="password" id="adminPass" placeholder="Contraseña">
+  <button onclick="loginAdmin()">Entrar</button>
 
-    <button class="btn-primary" onclick="loginAdmin()">Entrar</button>
-    <div id="loginError" style="display:none;">Contraseña incorrecta. Intenta de nuevo.</div>
-  </div>
+  <p id="loginError" style="color:red; display:none; font-weight:bold;">
+    Contraseña incorrecta.
+  </p>
+</div>
 
-  <!-- DASHBOARD -->
-  <div id="panelBox">
-    <div class="layout">
-      <!-- SIDEBAR -->
-      <aside class="sidebar">
-        <div class="logo">
-          <div class="logo-circle">U</div>
-          <div class="logo-text">
-            <span class="logo-title">UTNEZA Admin</span>
-            <span class="logo-subtitle">Panel de control</span>
-          </div>
-        </div>
+<div id="panelBox">
+  <h2>Panel Administrativo – INDARELÍN</h2>
 
-        <div>
-          <div class="nav-section-title">Panel</div>
-          <ul class="nav-list">
-            <li class="nav-item">
-              <button class="nav-link active" data-section="section-overview">
-                <span class="icon">🏠</span>
-                <span>Resumen</span>
-              </button>
-            </li>
-          </ul>
+  <h3>Historial de Mensajes</h3>
+  <button onclick="loadMessages()">Recargar</button>
 
-          <div class="nav-section-title">Gestión</div>
-          <ul class="nav-list">
-            <li class="nav-item">
-              <button class="nav-link" data-section="section-messages">
-                <span class="icon">💬</span>
-                <span>Mensajes</span>
-              </button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link" data-section="section-custom">
-                <span class="icon">⚙️</span>
-                <span>Respuestas personalizadas</span>
-              </button>
-            </li>
-          </ul>
-        </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Rol</th>
+        <th>Mensaje</th>
+        <th>Fecha</th>
+        <th>Eliminar</th>
+      </tr>
+    </thead>
+    <tbody id="messagesTable"></tbody>
+  </table>
 
-        <div class="sidebar-footer">
-          <div>Sesión de administrador activa.<br><span style="font-size:10px;">Protege esta URL y no compartas la contraseña.</span></div>
-        </div>
-      </aside>
+  <h3>Respuestas Personalizadas</h3>
+  <button onclick="loadCustomReplies()">Recargar</button>
 
-      <!-- MAIN AREA -->
-      <main class="main">
-        <header class="topbar">
-          <div class="topbar-left">
-            <span class="topbar-title">Panel administrativo UTNEZA</span>
-            <span class="topbar-subtitle">Gestiona las conversaciones de tu chatbot y las respuestas automáticas.</span>
-          </div>
-          <div class="topbar-right">
-            <span class="status-dot"></span>
-            <span>Backend conectado</span>
-          </div>
-        </header>
+  <table>
+    <thead>
+      <tr>
+        <th>Pregunta</th>
+        <th>Respuesta</th>
+        <th>Palabras Clave</th>
+        <th>Activa</th>
+        <th>Acción</th>
+      </tr>
+    </thead>
+    <tbody id="customTable"></tbody>
+  </table>
 
-        <div class="main-content">
+  <h3>Agregar / Editar Respuesta Personalizada</h3>
 
-          <!-- OVERVIEW SECTION -->
-          <section id="section-overview" class="section">
-            <div class="section-header">
-              <div>
-                <div class="section-title">Resumen general</div>
-                <div class="section-subtitle">Visión rápida del uso del chatbot y de tus respuestas personalizadas.</div>
-              </div>
-              <div class="section-actions">
-                <button class="btn-ghost" onclick="loadMessages()">🔄 Actualizar datos</button>
-              </div>
-            </div>
+  <form id="customForm">
+    <input type="hidden" id="customId">
 
-            <div class="cards-row">
-              <div class="card">
-                <div class="card-title">Total de mensajes</div>
-                <div class="card-value" id="cardTotalMensajes">–</div>
-                <div class="card-helper">Mensajes registrados en el historial.</div>
-              </div>
-              <div class="card">
-                <div class="card-title">Respuestas personalizadas</div>
-                <div class="card-value" id="cardTotalRespuestas">–</div>
-                <div class="card-helper">Activas y disponibles para el chatbot.</div>
-              </div>
-            </div>
+    <label>Pregunta:</label>
+    <input type="text" id="customQuestion" style="width:100%; padding:8px;"><br><br>
 
-            <div class="section-config-note">
-              Los datos del resumen se actualizan al cargar mensajes y respuestas personalizadas. Si ves guiones (–),
-              usa el botón «Actualizar datos» o cambia a las otras secciones para forzar la recarga.
-            </div>
-          </section>
+    <label>Respuesta:</label>
+    <textarea id="customAnswer" style="width:100%; padding:8px;" rows="4"></textarea><br><br>
 
-          <!-- MESSAGES SECTION -->
-          <section id="section-messages" class="section" style="display:none;">
-            <div class="section-header">
-              <div>
-                <div class="section-title">Historial de conversaciones</div>
-                <div class="section-subtitle">Visualiza y elimina mensajes del historial del chatbot.</div>
-              </div>
-              <div class="section-actions">
-                <button class="btn-ghost" onclick="loadMessages()">🔄 Recargar</button>
-              </div>
-            </div>
+    <label>Palabras clave (separadas por coma):</label>
+    <input type="text" id="customKeywords" style="width:100%; padding:8px;"><br><br>
 
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Rol</th>
-                    <th>Mensaje</th>
-                    <th>Fecha</th>
-                    <th>Acción</th>
-                  </tr>
-                </thead>
-                <tbody id="messagesTable"></tbody>
-              </table>
-            </div>
-          </section>
+    <label>
+      <input type="checkbox" id="customEnabled" checked>
+      Activar esta respuesta
+    </label><br><br>
 
-          <!-- CUSTOM REPLIES SECTION -->
-          <section id="section-custom" class="section" style="display:none;">
-            <div class="section-header">
-              <div>
-                <div class="section-title">Respuestas personalizadas</div>
-                <div class="section-subtitle">Define preguntas, respuestas y palabras clave que el chatbot usará con prioridad.</div>
-              </div>
-              <div class="section-actions">
-                <button class="btn-ghost" onclick="resetCustomForm()">➕ Nueva respuesta</button>
-                <button class="btn-ghost" onclick="loadCustomReplies()">🔄 Recargar</button>
-              </div>
-            </div>
+    <button type="submit">Guardar</button>
+    <button type="button" onclick="resetCustomForm()" style="background:#777;">Limpiar</button>
+  </form>
 
-            <form id="customForm">
-              <input type="hidden" id="customId">
+</div>
 
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="customQuestion">Pregunta / disparador</label>
-                  <textarea id="customQuestion" placeholder="Ejemplo: ¿Cuáles son tus horarios de atención?"></textarea>
-                </div>
-                <div class="form-group">
-                  <label for="customAnswer">Respuesta del chatbot</label>
-                  <textarea id="customAnswer" placeholder="Escribe aquí la respuesta exacta que quieres que dé el asistente."></textarea>
-                </div>
-                <div class="form-group">
-                  <label for="customKeywords">Palabras clave (separadas por coma)</label>
-                  <input id="customKeywords" placeholder="horarios, atención, servicio">
-                </div>
-              </div>
+<script src="admin.js"></script>
 
-              <div class="form-footer">
-                <label class="checkbox-inline">
-                  <input type="checkbox" id="customEnabled" checked>
-                  Activar respuesta personalizada
-                </label>
-
-                <div style="display:flex; gap:8px;">
-                  <button type="button" class="btn-secondary" onclick="resetCustomForm()">Limpiar formulario</button>
-                  <button type="submit" class="btn-save">
-                    💾 Guardar
-                  </button>
-                </div>
-              </div>
-            </form>
-
-            <div class="table-container" style="margin-top:14px;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Pregunta</th>
-                    <th>Respuesta</th>
-                    <th>Palabras clave</th>
-                    <th>Activa</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="customTable"></tbody>
-              </table>
-            </div>
-
-            <div class="section-config-note">
-              Las respuestas personalizadas se aplican antes de consultar la IA. Usa preguntas claras y específicas
-              para asegurar que el chatbot elija la respuesta correcta.
-            </div>
-          </section>
-
-        </div>
-      </main>
-    </div>
-  </div>
-
-  <script src="admin.js"></script>
-  <script>
-    // Cambio de pestañas en el panel (sidebar estilo Google Admin)
-    document.addEventListener("DOMContentLoaded", () => {
-      const navLinks = document.querySelectorAll(".nav-link[data-section]");
-      const sections = {
-        "section-overview": document.getElementById("section-overview"),
-        "section-messages": document.getElementById("section-messages"),
-        "section-custom": document.getElementById("section-custom"),
-      };
-
-      navLinks.forEach(btn => {
-        btn.addEventListener("click", () => {
-          navLinks.forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-
-          const target = btn.getAttribute("data-section");
-          Object.keys(sections).forEach(key => {
-            sections[key].style.display = (key === target) ? "block" : "none";
-          });
-        });
-      });
-    });
-  </script>
 </body>
 </html>
