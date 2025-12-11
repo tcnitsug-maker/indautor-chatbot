@@ -1,6 +1,6 @@
 const CustomReply = require("../models/CustomReply");
 
-// Listar todas las respuestas personalizadas
+// Listar todas las respuestas
 exports.listCustomReplies = async (req, res) => {
   try {
     const replies = await CustomReply.find().sort({ createdAt: -1 });
@@ -11,27 +11,27 @@ exports.listCustomReplies = async (req, res) => {
   }
 };
 
-// Crear una nueva respuesta personalizada
+// Crear respuesta
 exports.createCustomReply = async (req, res) => {
   try {
     let { question, answer, keywords, enabled } = req.body;
 
     if (!question || !answer) {
-      return res.status(400).json({ error: "Faltan campos obligatorios" });
+      return res.status(400).json({ error: "Pregunta y respuesta son obligatorias" });
     }
 
     if (typeof keywords === "string") {
       keywords = keywords
         .split(",")
-        .map(k => k.trim())
-        .filter(k => k.length > 0);
+        .map((k) => k.trim())
+        .filter(Boolean);
     }
 
     const reply = await CustomReply.create({
       question,
       answer,
-      keywords: keywords || [],
-      enabled: enabled !== false
+      keywords: Array.isArray(keywords) ? keywords : [],
+      enabled: enabled !== false,
     });
 
     res.json(reply);
@@ -41,7 +41,7 @@ exports.createCustomReply = async (req, res) => {
   }
 };
 
-// Actualizar una respuesta personalizada
+// Actualizar respuesta
 exports.updateCustomReply = async (req, res) => {
   try {
     let { question, answer, keywords, enabled } = req.body;
@@ -49,24 +49,29 @@ exports.updateCustomReply = async (req, res) => {
     if (typeof keywords === "string") {
       keywords = keywords
         .split(",")
-        .map(k => k.trim())
-        .filter(k => k.length > 0);
+        .map((k) => k.trim())
+        .filter(Boolean);
     }
 
-    const updated = await CustomReply.findByIdAndUpdate(
+    const reply = await CustomReply.findByIdAndUpdate(
       req.params.id,
-      { question, answer, keywords, enabled },
+      {
+        question,
+        answer,
+        keywords: Array.isArray(keywords) ? keywords : [],
+        enabled: !!enabled,
+      },
       { new: true }
     );
 
-    res.json(updated);
+    res.json(reply);
   } catch (error) {
     console.error("Error updateCustomReply:", error);
     res.status(500).json({ error: "Error actualizando respuesta personalizada" });
   }
 };
 
-// Eliminar una respuesta personalizada
+// Eliminar respuesta
 exports.deleteCustomReply = async (req, res) => {
   try {
     await CustomReply.findByIdAndDelete(req.params.id);
