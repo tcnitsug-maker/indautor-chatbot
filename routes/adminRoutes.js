@@ -12,6 +12,7 @@ router.post("/login", (req, res) => {
 
 // Historial de mensajes
 router.get("/messages", getAllMessages);
+router.get("/metrics", getMetrics);
 
 // Eliminar mensaje
 router.delete("/messages/:id", deleteMessage);
