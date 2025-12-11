@@ -1,6 +1,7 @@
-// URL del backend para el panel admin
-const API_URL = "https://indautor-chatbot-1.onrender.com/admin";
-const CUSTOM_URL = "https://indautor-chatbot-1.onrender.com/admin/custom-replies";
+// URL base del backend para admin
+const API_BASE = "https://indautor-chatbot-1.onrender.com";
+const API_URL = `${API_BASE}/admin`;
+const CUSTOM_URL = `${API_BASE}/admin/custom-replies`;
 
 // ---------- LOGIN ----------
 function loginAdmin() {
@@ -16,7 +17,6 @@ function loginAdmin() {
       if (data.ok) {
         document.getElementById("loginBox").style.display = "none";
         document.getElementById("panelBox").style.display = "block";
-
         loadMessages();
         loadCustomReplies();
       } else {
@@ -24,69 +24,29 @@ function loginAdmin() {
       }
     })
     .catch((err) => {
-      console.error("Error al conectar:", err);
-      alert("No se pudo conectar al servidor.");
+      console.error("Error login:", err);
+      alert("Error en el login");
     });
 }
 
-// ---------- MENSAJES ----------
-function loadMessages() {
-  fetch(API_URL + "/messages")
-    .then((r) => r.json())
-    .then((messages) => {
-      const table = document.getElementById("messagesTable");
-      table.innerHTML = "";
+// ---------- TABS ----------
+document.addEventListener("click", (e) => {
+  if (e.target.classList.contains("tab")) {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach((c) =>
+      c.classList.remove("active")
+    );
+    e.target.classList.add("active");
+    const tabId = e.target.getAttribute("data-tab");
+    document.getElementById(tabId).classList.add("active");
+  }
+});
 
-      messages.forEach((m) => {
-        table.innerHTML += `
-          <tr>
-            <td>${m.role}</td>
-            <td>${m.text}</td>
-            <td>${new Date(m.createdAt).toLocaleString()}</td>
-            <td><button class="deleteBtn" onclick="deleteMsg('${m._id}')">Eliminar</button></td>
-          </tr>
-        `;
-      });
-    });
-}
-
-function deleteMsg(id) {
-  if (!confirm("¿Eliminar mensaje?")) return;
-
-  fetch(API_URL + "/messages/" + id, { method: "DELETE" })
-    .then(() => loadMessages());
-}
-
-// ---------- RESPUESTAS PERSONALIZADAS ----------
-function loadCustomReplies() {
-  fetch(CUSTOM_URL)
-    .then((r) => r.json())
-    .then((replies) => {
-      const table = document.getElementById("customTable");
-      table.innerHTML = "";
-
-      replies.forEach((r) => {
-        let kw = (r.keywords || []).join(", ");
-
-        table.innerHTML += `
-          <tr>
-            <td>${r.question}</td>
-            <td>${r.answer}</td>
-            <td>${kw}</td>
-            <td>${r.enabled ? "Sí" : "No"}</td>
-            <td>
-              <button onclick="fillCustomForm('${r._id}', \`${escapeHtml(
-          r.question
-        )}\`, \`${escapeHtml(r.answer)}\`, '${kw}', ${
-          r.enabled ? "true" : "false"
-        })">Editar</button>
-
-              <button class="deleteBtn" onclick="deleteCustomReply('${r._id}')">Eliminar</button>
-            </td>
-          </tr>
-        `;
-      });
-    });
+// ---------- HISTORIAL ----------
+function formatDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleString();
 }
 
 function escapeHtml(text) {
@@ -98,12 +58,123 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;");
 }
 
+function loadMessages() {
+  fetch(API_URL + "/messages")
+    .then((r) => r.json())
+    .then((messages) => {
+      const tbody = document.getElementById("messagesTable");
+      tbody.innerHTML = "";
+      messages.forEach((m) => {
+        const tr = document.createElement("tr");
+
+        const rolTd = document.createElement("td");
+        const badge = document.createElement("span");
+        badge.className =
+          "badge " + (m.role === "user" ? "user" : m.role === "bot" ? "bot" : "");
+        badge.textContent = m.role;
+        rolTd.appendChild(badge);
+
+        const textTd = document.createElement("td");
+        textTd.innerHTML = `<div class="small">${escapeHtml(m.text)}</div>`;
+
+        const dateTd = document.createElement("td");
+        dateTd.textContent = formatDate(m.createdAt);
+
+        const delTd = document.createElement("td");
+        const btn = document.createElement("button");
+        btn.textContent = "🗑️";
+        btn.onclick = () => deleteMessage(m._id);
+        delTd.appendChild(btn);
+
+        tr.appendChild(rolTd);
+        tr.appendChild(textTd);
+        tr.appendChild(dateTd);
+        tr.appendChild(delTd);
+
+        tbody.appendChild(tr);
+      });
+    })
+    .catch((err) => {
+      console.error("Error loading messages:", err);
+      alert("Error cargando mensajes");
+    });
+}
+
+function deleteMessage(id) {
+  if (!confirm("¿Eliminar este mensaje?")) return;
+
+  fetch(`${API_URL}/messages/${id}`, { method: "DELETE" })
+    .then(() => loadMessages())
+    .catch((err) => {
+      console.error("Error delete:", err);
+      alert("Error eliminando mensaje");
+    });
+}
+
+// ---------- CUSTOM REPLIES ----------
+function loadCustomReplies() {
+  fetch(CUSTOM_URL)
+    .then((r) => r.json())
+    .then((replies) => {
+      const tbody = document.getElementById("customTable");
+      tbody.innerHTML = "";
+      replies.forEach((r) => {
+        const tr = document.createElement("tr");
+
+        const qTd = document.createElement("td");
+        qTd.innerHTML = `<div class="small">${escapeHtml(r.question)}</div>`;
+
+        const aTd = document.createElement("td");
+        aTd.innerHTML = `<div class="small">${escapeHtml(r.answer)}</div>`;
+
+        const kTd = document.createElement("td");
+        const kws = (r.keywords || []).join(", ");
+        kTd.innerHTML = `<div class="small">${escapeHtml(kws)}</div>`;
+
+        const enTd = document.createElement("td");
+        enTd.textContent = r.enabled ? "Sí" : "No";
+
+        const actTd = document.createElement("td");
+        const btnEdit = document.createElement("button");
+        btnEdit.textContent = "✏️";
+        btnEdit.onclick = () =>
+          fillCustomForm(
+            r._id,
+            r.question,
+            r.answer,
+            (r.keywords || []).join(", "),
+            r.enabled
+          );
+
+        const btnDel = document.createElement("button");
+        btnDel.textContent = "🗑️";
+        btnDel.style.marginLeft = "4px";
+        btnDel.onclick = () => deleteCustomReply(r._id);
+
+        actTd.appendChild(btnEdit);
+        actTd.appendChild(btnDel);
+
+        tr.appendChild(qTd);
+        tr.appendChild(aTd);
+        tr.appendChild(kTd);
+        tr.appendChild(enTd);
+        tr.appendChild(actTd);
+
+        tbody.appendChild(tr);
+      });
+    })
+    .catch((err) => {
+      console.error("Error loadCustomReplies:", err);
+      alert("Error cargando respuestas personalizadas");
+    });
+}
+
 function fillCustomForm(id, question, answer, keywords, enabled) {
   document.getElementById("customId").value = id;
-  document.getElementById("customQuestion").value = question.replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-  document.getElementById("customAnswer").value = answer.replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-  document.getElementById("customKeywords").value = keywords;
-  document.getElementById("customEnabled").checked = enabled;
+  document.getElementById("customQuestion").value = question;
+  document.getElementById("customAnswer").value = answer;
+  document.getElementById("customKeywords").value = keywords || "";
+  document.getElementById("customEnabled").checked = !!enabled;
 }
 
 function resetCustomForm() {
@@ -114,21 +185,18 @@ function resetCustomForm() {
   document.getElementById("customEnabled").checked = true;
 }
 
-document.getElementById("customForm").addEventListener("submit", function (e) {
+// Guardar / actualizar
+document.getElementById("customForm").addEventListener("submit", (e) => {
   e.preventDefault();
 
   const id = document.getElementById("customId").value;
-  const question = document.getElementById("customQuestion").value.trim();
-  const answer = document.getElementById("customAnswer").value.trim();
-  const keywords = document.getElementById("customKeywords").value.trim();
-  const enabled = document.getElementById("customEnabled").checked;
+  const payload = {
+    question: document.getElementById("customQuestion").value,
+    answer: document.getElementById("customAnswer").value,
+    keywords: document.getElementById("customKeywords").value,
+    enabled: document.getElementById("customEnabled").checked,
+  };
 
-  if (!question || !answer) {
-    alert("La pregunta y la respuesta son obligatorias.");
-    return;
-  }
-
-  const payload = { question, answer, keywords, enabled };
   const url = id ? `${CUSTOM_URL}/${id}` : CUSTOM_URL;
   const method = id ? "PUT" : "POST";
 
@@ -137,6 +205,7 @@ document.getElementById("customForm").addEventListener("submit", function (e) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   })
+    .then((r) => r.json())
     .then(() => {
       resetCustomForm();
       loadCustomReplies();
@@ -151,5 +220,9 @@ function deleteCustomReply(id) {
   if (!confirm("¿Eliminar esta respuesta personalizada?")) return;
 
   fetch(`${CUSTOM_URL}/${id}`, { method: "DELETE" })
-    .then(() => loadCustomReplies());
+    .then(() => loadCustomReplies())
+    .catch((err) => {
+      console.error("Error deleteCustomReply:", err);
+      alert("Error eliminando respuesta personalizada");
+    });
 }
