@@ -198,32 +198,31 @@
       </div>
 
       <!-- 📊 MÉTRICAS COMPLETAS -->
-      <div id="metricsBox" style="margin-top:20px; padding:15px; background:#fff; border-radius:8px;">
-        <h3>Métricas del Chatbot</h3>
+      <div id="tabMetrics" class="tab-content">
+  <h2>📊 Métricas del Chatbot</h2>
 
-        <p><b>Total mensajes:</b> <span id="m_total"></span></p>
-        <p><b>OpenAI:</b> <span id="m_openai"></span></p>
-        <p><b>Gemini:</b> <span id="m_gemini"></span></p>
-        <p><b>Personalizados:</b> <span id="m_custom"></span></p>
+  <div class="cards">
+    <div class="card">Total mensajes<br><span id="m_total"></span></div>
+    <div class="card">OpenAI<br><span id="m_openai"></span></div>
+    <div class="card">Gemini<br><span id="m_gemini"></span></div>
+    <div class="card">Personalizadas<br><span id="m_custom"></span></div>
+  </div>
 
-        <hr>
+  <h3>Actividad últimos 7 días</h3>
+  <canvas id="chartDays"></canvas>
 
-        <h4>📊 Actividad últimos 7 días</h4>
-        <canvas id="chartDays" style="max-width:600px;"></canvas>
+  <h3>Horas pico (0–23 hrs)</h3>
+  <canvas id="chartHours"></canvas>
 
-        <h4>🕒 Horas pico (0–23 hrs)</h4>
-        <canvas id="chartHours" style="max-width:600px;"></canvas>
+  <h3>Últimos 30 días</h3>
+  <canvas id="chartMonth"></canvas>
 
-        <h4>📅 Mensajes últimos 30 días</h4>
-        <canvas id="chartMonth" style="max-width:600px;"></canvas>
+  <h3>Comparación semanal</h3>
+  <canvas id="chartWeeks"></canvas>
 
-        <h4>📅 Comparación semanal</h4>
-        <canvas id="chartWeeks" style="max-width:600px;"></canvas>
-
-        <h4>🔎 Palabras más usadas</h4>
-        <ul id="topWords"></ul>
-      </div>
-
+  <h3>Palabras más usadas</h3>
+  <ul id="topWords"></ul>
+  </div>
     </section>
   </main>
 
