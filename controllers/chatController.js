@@ -7,9 +7,7 @@ const OPENAI_MODEL = "gpt-4o-mini";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-// FORZAR SOLO MODELOS GRATIS
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 
 let useGemini = true; // true = Gemini, false = OpenAI
 
