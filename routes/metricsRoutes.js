@@ -2,7 +2,10 @@ const express = require("express");
 const router = express.Router();
 const Message = require("../models/Message");
 
+
+// ===============================
 // MÉTRICAS DEL DÍA ACTUAL
+// ===============================
 router.get("/", async (req, res) => {
   try {
     const today = new Date();
@@ -17,7 +20,10 @@ router.get("/", async (req, res) => {
   }
 });
 
+
+// ===============================
 // MÉTRICAS POR RANGO DE FECHAS
+// ===============================
 router.get("/range", async (req, res) => {
   try {
     const { start, end } = req.query;
@@ -39,7 +45,112 @@ router.get("/range", async (req, res) => {
   }
 });
 
-// FUNCIÓN REUTILIZABLE PARA MÉTRICAS
+
+// ===============================
+// NUEVO: ACTIVIDAD POR HORA
+// ===============================
+router.get("/hourly", async (req, res) => {
+  try {
+    const { start, end } = req.query;
+
+    const inicio = start ? new Date(start) : new Date();
+    const fin = end ? new Date(end) : new Date();
+
+    if (!start) inicio.setHours(0, 0, 0, 0);
+    fin.setHours(23, 59, 59, 999);
+
+    const porHora = await Message.aggregate([
+      { $match: { createdAt: { $gte: inicio, $lte: fin } } },
+      {
+        $group: {
+          _id: { $hour: "$createdAt" },
+          total: { $sum: 1 }
+        }
+      },
+      { $sort: { "_id": 1 } }
+    ]);
+
+    res.json({ porHora });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error obteniendo actividad por hora" });
+  }
+});
+
+
+// ===============================
+// NUEVO: COMPARATIVA GEMINI / OPENAI
+// ===============================
+router.get("/compare", async (req, res) => {
+  try {
+    const { start, end } = req.query;
+
+    const inicio = start ? new Date(start) : new Date();
+    const fin = end ? new Date(end) : new Date();
+
+    if (!start) inicio.setHours(0, 0, 0, 0);
+    fin.setHours(23, 59, 59, 999);
+
+    const data = await Message.aggregate([
+      { $match: { role: "bot", createdAt: { $gte: inicio, $lte: fin } } },
+      {
+        $group: {
+          _id: "$source",
+          total: { $sum: 1 }
+        }
+      }
+    ]);
+
+    res.json({
+      gemini: data.find(e => e._id === "gemini")?.total || 0,
+      openai: data.find(e => e._id === "openai")?.total || 0,
+      custom: data.find(e => e._id === "custom")?.total || 0,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error comparando IA" });
+  }
+});
+
+
+// ===============================
+// NUEVO: EXPORTAR A EXCEL (CSV)
+// ===============================
+router.get("/export", async (req, res) => {
+  try {
+    const { start, end } = req.query;
+
+    const inicio = start ? new Date(start) : new Date("2000-01-01");
+    const fin = end ? new Date(end) : new Date();
+    fin.setHours(23, 59, 59, 999);
+
+    const mensajes = await Message.find({
+      createdAt: { $gte: inicio, $lte: fin }
+    }).lean();
+
+    let csv = "rol,texto,fuente,fecha\n";
+
+    mensajes.forEach(m => {
+      const cleanText = (m.text || "").replace(/,/g, " ");
+      csv += `${m.role},${cleanText},${m.source},${m.createdAt}\n`;
+    });
+
+    res.header("Content-Type", "text/csv");
+    res.attachment(`metricas_${start || "todo"}_${end || "actual"}.csv`);
+    return res.send(csv);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error exportando CSV" });
+  }
+});
+
+
+// ===============================
+// FUNCIÓN GENERAL DE MÉTRICAS
+// ===============================
 async function calcularMetricas(inicio, fin) {
   const total = await Message.countDocuments({
     createdAt: { $gte: inicio, $lte: fin }
