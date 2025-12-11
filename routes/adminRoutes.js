@@ -1,20 +1,26 @@
 const express = require("express");
 const router = express.Router();
-const { getAllMessages, deleteMessage } = require("../controllers/adminController");
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "12345";
+const { 
+  getMessages, 
+  deleteMessage,
+  createCustom,
+  updateCustom,
+  deleteCustom,
+  getCustomReplies,
+  loginAdmin,
+  getMetrics          // ← AQUÍ
+} = require("../controllers/adminController");
 
-// Login de admin
-router.post("/login", (req, res) => {
-  const { password } = req.body;
-  res.json({ ok: password === ADMIN_PASSWORD });
-});
-
-// Historial de mensajes
-router.get("/messages", getAllMessages);
-router.get("/metrics", getMetrics);
-
-// Eliminar mensaje
+router.post("/login", loginAdmin);
+router.get("/messages", getMessages);
 router.delete("/messages/:id", deleteMessage);
+
+router.get("/custom-replies", getCustomReplies);
+router.post("/custom-replies", createCustom);
+router.put("/custom-replies/:id", updateCustom);
+router.delete("/custom-replies/:id", deleteCustom);
+
+router.get("/metrics", getMetrics);  // ← ESTA RUTA YA NO FALLARÁ
 
 module.exports = router;
