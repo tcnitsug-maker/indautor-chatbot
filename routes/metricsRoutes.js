@@ -7,7 +7,9 @@ router.get("/", async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const totalHoy = await Message.countDocuments({ createdAt: { $gte: today } });
+    const totalHoy = await Message.countDocuments({
+      createdAt: { $gte: today }
+    });
 
     const iaHoy = await Message.countDocuments({
       role: "bot",
