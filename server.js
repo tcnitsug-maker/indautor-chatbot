@@ -4,7 +4,6 @@ const mongoose = require("mongoose");
 const path = require("path");
 require("dotenv").config();
 
-// Rutas existentes
 const chatRoutes = require("./routes/chatRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const customReplyRoutes = require("./routes/customReplyRoutes");
@@ -12,46 +11,60 @@ const customReplyRoutes = require("./routes/customReplyRoutes");
 const app = express();
 
 // --------------------
-// 🔒 CORS seguro
+// 🔒 CORS
 // --------------------
+const allowedOrigins = [
+  "https://indarelin.com",          // ✅ pon aquí TU dominio real en Hostinger
+  "https://www.indarelin.com",
+  "http://localhost:3000",
+  "http://127.0.0.1:5500",
+];
+
 app.use(
   cors({
-    origin: [
-      "https://utneza.store",
-      "https://www.utneza.store"
-    ],
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      // En desarrollo puedes permitir todo:
+      return cb(null, true);
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
 // --------------------
-// 📦 Body parser
+// 🧩 Middlewares
 // --------------------
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // --------------------
-// 🔌 Conexión MongoDB
+// 🗄️ Conexión a MongoDB
 // --------------------
+const MONGO_URI =
+  process.env.MONGO_URI ||
+  "mongodb+srv://TU_USER:TU_PASS@TU_CLUSTER.mongodb.net/chatbot";
+
 mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Atlas conectado"))
-  .catch((err) => console.error("Error en MongoDB:", err));
+  .connect(MONGO_URI)
+  .then(() => console.log("✅ Conectado a MongoDB"))
+  .catch((err) => console.error("❌ Error MongoDB:", err));
 
 // --------------------
-// 🚀 Rutas API
-// --------------------
-app.use("/chat", chatRoutes);
-app.use("/admin", adminRoutes);
-app.use("/admin/custom-replies", customReplyRoutes);
-
-// --------------------
-// 🗂 Servir archivos estáticos del panel admin
+// 📂 Archivos estáticos (admin panel)
 // --------------------
 app.use(express.static(path.join(__dirname, "public")));
 
 // --------------------
-// 🌐 Ruta del panel administrativo
+// 📦 Rutas API
+// --------------------
+app.use("/chat", chatRoutes);                // POST /chat
+app.use("/admin", adminRoutes);             // login + mensajes
+app.use("/admin/custom-replies", customReplyRoutes); // CRUD respuestas personalizadas
+
+// --------------------
+// 🌐 Ruta del panel administrativo (HTML)
 // --------------------
 app.get("/admin-panel", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
@@ -61,6 +74,6 @@ app.get("/admin-panel", (req, res) => {
 // 🟢 Iniciar servidor
 // --------------------
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () =>
-  console.log(`Servidor iniciado en puerto ${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
+});
