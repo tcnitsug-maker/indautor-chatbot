@@ -226,3 +226,92 @@ function deleteCustomReply(id) {
       alert("Error eliminando respuesta personalizada");
     });
 }
+function loadMetrics() {
+  fetch(API_URL + "/metrics")
+    .then(r => r.json())
+    .then(m => {
+      // Datos básicos
+      document.getElementById("m_total").textContent = m.totalMessages;
+      document.getElementById("m_openai").textContent = m.openaiCount;
+      document.getElementById("m_gemini").textContent = m.geminiCount;
+      document.getElementById("m_custom").textContent = m.customCount;
+
+      // ---- GRÁFICA 7 DÍAS ----
+      new Chart(document.getElementById("chartDays"), {
+        type: "line",
+        data: {
+          labels: m.last7Days.map(d => d._id),
+          datasets: [{
+            label: "Mensajes por día",
+            data: m.last7Days.map(d => d.count),
+            borderColor: "blue",
+            borderWidth: 2,
+            fill: false
+          }]
+        }
+      });
+
+      // ---- GRÁFICA HORAS ----
+      new Chart(document.getElementById("chartHours"), {
+        type: "bar",
+        data: {
+          labels: m.perHour.map(d => d._id + "h"),
+          datasets: [{
+            label: "Mensajes",
+            data: m.perHour.map(d => d.count),
+            backgroundColor: "orange"
+          }]
+        }
+      });
+
+      // ---- GRÁFICA ÚLTIMOS 30 DÍAS ----
+      new Chart(document.getElementById("chartMonth"), {
+        type: "line",
+        data: {
+          labels: m.last30Days.map(d => d._id),
+          datasets: [{
+            label: "Mensajes últimos 30 días",
+            data: m.last30Days.map(d => d.count),
+            borderColor: "purple",
+            borderWidth: 2,
+            fill: false
+          }]
+        },
+        options: {
+          scales: {
+            x: { ticks: { maxRotation: 90, minRotation: 45 } },
+            y: { beginAtZero: true }
+          }
+        }
+      });
+
+      // ---- GRÁFICA COMPARACIÓN SEMANAL ----
+      new Chart(document.getElementById("chartWeeks"), {
+        type: "bar",
+        data: {
+          labels: m.thisWeek.map(d => d._id),
+          datasets: [
+            {
+              label: "Esta semana",
+              data: m.thisWeek.map(d => d.count),
+              backgroundColor: "green"
+            },
+            {
+              label: "Semana anterior",
+              data: m.lastWeek.map(d => d.count),
+              backgroundColor: "gray"
+            }
+          ]
+        }
+      });
+
+      // ---- PALABRAS MÁS USADAS ----
+      const list = document.getElementById("topWords");
+      list.innerHTML = "";
+      m.topWords.forEach(w => {
+        const li = document.createElement("li");
+        li.textContent = `${w.word} (${w.count})`;
+        list.appendChild(li);
+      });
+    });
+}
