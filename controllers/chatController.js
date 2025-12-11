@@ -4,7 +4,7 @@ const fetch = require("node-fetch");
 
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";   // ← SOLO ESTA LÍNEA
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
