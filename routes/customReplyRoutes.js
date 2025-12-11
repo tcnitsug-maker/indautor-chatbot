@@ -4,7 +4,7 @@ const {
   listCustomReplies,
   createCustomReply,
   updateCustomReply,
-  deleteCustomReply
+  deleteCustomReply,
 } = require("../controllers/customReplyController");
 
 router.get("/", listCustomReplies);
