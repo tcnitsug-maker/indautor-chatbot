@@ -13,19 +13,18 @@ function loginAdmin() {
     body: JSON.stringify({ password: pass }),
   })
     .then((r) => r.json())
-    .then((data) => {
-      if (data.ok) {
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("panelBox").style.display = "block";
+.then((data) => {
+  if (data.ok) {
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("panelBox").style.display = "block";
 
-  loadMessages();
-  loadCustomReplies();
-  loadMetrics();   // <-- ESTO ES OBLIGATORIO PARA QUE FUNCIONE EL DASHBOARD
-}
-      } else {
-        document.getElementById("loginError").style.display = "block";
-      }
-    })
+    loadMessages();
+    loadCustomReplies();
+    loadMetrics(); // MÉTRICAS
+  } else {
+    document.getElementById("loginError").style.display = "block";
+  }
+})
     .catch((err) => {
       console.error("Error login:", err);
       alert("Error en el login");
