@@ -6,6 +6,8 @@ const METRICS_URL = `${API_BASE}/metrics`;
 
 let pieChart = null;
 let barChart = null;
+let hourlyChart = null;
+let compareChart = null;
 
 // ---------- LOGIN ----------
 function loginAdmin() {
@@ -16,37 +18,39 @@ function loginAdmin() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ password: pass }),
   })
-    .then(r => r.json())
-    .then(data => {
+    .then((r) => r.json())
+    .then((data) => {
       if (data.ok) {
         document.getElementById("loginBox").style.display = "none";
         document.getElementById("panelBox").style.display = "block";
 
         loadMessages();
         loadCustomReplies();
-        loadMetrics(); // cargar métricas al entrar
+        loadMetrics();
       } else {
         document.getElementById("loginError").style.display = "block";
       }
     })
-    .catch(err => {
+    .catch((err) => {
       console.error("Error login:", err);
       alert("Error en el login");
     });
 }
 
 // ---------- TABS ----------
-document.addEventListener("click", e => {
+document.addEventListener("click", (e) => {
   if (e.target.classList.contains("tab")) {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach((c) =>
+      c.classList.remove("active")
+    );
 
     e.target.classList.add("active");
     const tabId = e.target.getAttribute("data-tab");
     document.getElementById(tabId).classList.add("active");
 
     if (tabId === "tabMetrics") {
-      loadMetrics(); // Cargar métricas al abrir pestaña
+      loadMetrics();
     }
   }
 });
@@ -69,12 +73,12 @@ function escapeHtml(text) {
 
 function loadMessages() {
   fetch(API_URL + "/messages")
-    .then(r => r.json())
-    .then(messages => {
+    .then((r) => r.json())
+    .then((messages) => {
       const tbody = document.getElementById("messagesTable");
       tbody.innerHTML = "";
 
-      messages.forEach(m => {
+      messages.forEach((m) => {
         const tr = document.createElement("tr");
 
         const rolTd = document.createElement("td");
@@ -103,7 +107,7 @@ function loadMessages() {
         tbody.appendChild(tr);
       });
     })
-    .catch(err => {
+    .catch((err) => {
       console.error("Error loading messages:", err);
       alert("Error cargando mensajes");
     });
@@ -114,7 +118,7 @@ function deleteMessage(id) {
 
   fetch(`${API_URL}/messages/${id}`, { method: "DELETE" })
     .then(() => loadMessages())
-    .catch(err => {
+    .catch((err) => {
       console.error("Error delete:", err);
       alert("Error eliminando mensaje");
     });
@@ -123,60 +127,33 @@ function deleteMessage(id) {
 // ---------- CUSTOM REPLIES ----------
 function loadCustomReplies() {
   fetch(CUSTOM_URL)
-    .then(r => r.json())
-    .then(replies => {
+    .then((r) => r.json())
+    .then((replies) => {
       const tbody = document.getElementById("customTable");
       tbody.innerHTML = "";
 
-      replies.forEach(r => {
+      replies.forEach((r) => {
         const tr = document.createElement("tr");
 
-        const qTd = document.createElement("td");
-        qTd.innerHTML = `<div class="small">${escapeHtml(r.question)}</div>`;
-
-        const aTd = document.createElement("td");
-        aTd.innerHTML = `<div class="small">${escapeHtml(r.answer)}</div>`;
-
-        const kTd = document.createElement("td");
-        const kws = (r.keywords || []).join(", ");
-        kTd.innerHTML = `<div class="small">${escapeHtml(kws)}</div>`;
-
-        const enTd = document.createElement("td");
-        enTd.textContent = r.enabled ? "Sí" : "No";
-
-        const actTd = document.createElement("td");
-        const btnEdit = document.createElement("button");
-        btnEdit.textContent = "✏️";
-        btnEdit.onclick = () =>
-          fillCustomForm(
-            r._id,
-            r.question,
-            r.answer,
-            (r.keywords || []).join(", "),
-            r.enabled
-          );
-
-        const btnDel = document.createElement("button");
-        btnDel.textContent = "🗑️";
-        btnDel.style.marginLeft = "4px";
-        btnDel.onclick = () => deleteCustomReply(r._id);
-
-        actTd.appendChild(btnEdit);
-        actTd.appendChild(btnDel);
-
-        tr.appendChild(qTd);
-        tr.appendChild(aTd);
-        tr.appendChild(kTd);
-        tr.appendChild(enTd);
-        tr.appendChild(actTd);
+        tr.innerHTML = `
+          <td><div class="small">${escapeHtml(r.question)}</div></td>
+          <td><div class="small">${escapeHtml(r.answer)}</div></td>
+          <td><div class="small">${escapeHtml((r.keywords || []).join(", "))}</div></td>
+          <td>${r.enabled ? "Sí" : "No"}</td>
+          <td>
+            <button onclick="fillCustomForm('${r._id}', '${escapeHtml(
+              r.question
+            )}', \`${escapeHtml(r.answer)}\`, '${(r.keywords || []).join(",")}', ${
+          r.enabled
+        })">✏️</button>
+            <button onclick="deleteCustomReply('${r._id}')">🗑️</button>
+          </td>
+        `;
 
         tbody.appendChild(tr);
       });
     })
-    .catch(err => {
-      console.error("Error loadCustomReplies:", err);
-      alert("Error cargando respuestas personalizadas");
-    });
+    .catch((err) => console.error("Error loadCustomReplies:", err));
 }
 
 function fillCustomForm(id, question, answer, keywords, enabled) {
@@ -195,6 +172,7 @@ function resetCustomForm() {
   document.getElementById("customEnabled").checked = true;
 }
 
+// Guardar / actualizar
 document.getElementById("customForm").addEventListener("submit", (e) => {
   e.preventDefault();
 
@@ -215,69 +193,64 @@ document.getElementById("customForm").addEventListener("submit", (e) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   })
-    .then(r => r.json())
     .then(() => {
       resetCustomForm();
       loadCustomReplies();
     })
-    .catch(err => {
-      console.error("Error guardando:", err);
-      alert("Error guardando la respuesta personalizada");
-    });
+    .catch((err) => console.error("Error guardando:", err));
 });
 
 function deleteCustomReply(id) {
   if (!confirm("¿Eliminar esta respuesta personalizada?")) return;
 
   fetch(`${CUSTOM_URL}/${id}`, { method: "DELETE" })
-    .then(() => loadCustomReplies())
-    .catch(err => {
-      console.error("Error deleteCustomReply:", err);
-      alert("Error eliminando respuesta personalizada");
-    });
+    .then(loadCustomReplies)
+    .catch((err) => console.error("Error deleteCustomReply:", err));
 }
 
-// ---------- MÉTRICAS ----------
-
+// ---------- MÉTRICAS PRINCIPALES ----------
 function loadMetrics() {
   fetch(METRICS_URL)
-    .then(r => r.json())
-    .then(data => {
+    .then((r) => r.json())
+    .then((data) => {
       showMetrics(data);
+      loadHourly();
+      loadCompare();
     })
-    .catch(err => console.error("Error cargando métricas:", err));
+    .catch((err) => console.error("Error cargando métricas:", err));
 }
 
 function consultarRango() {
   const s = document.getElementById("startDate").value;
   const e = document.getElementById("endDate").value;
 
-  if (!s || !e) {
-    alert("Selecciona las fechas");
-    return;
-  }
+  if (!s || !e) return alert("Selecciona fechas");
 
   fetch(`${METRICS_URL}/range?start=${s}&end=${e}`)
-    .then(r => r.json())
-    .then(data => showMetrics(data));
+    .then((r) => r.json())
+    .then((data) => {
+      showMetrics(data);
+      loadHourly(s, e);
+      loadCompare(s, e);
+    });
 }
 
 function filtroRapido(dias) {
   let start = new Date();
   let end = new Date();
 
-  if (dias === "hoy") {
-    start = new Date();
-  } else {
-    start.setDate(start.getDate() - parseInt(dias));
-  }
+  if (dias !== "hoy") start.setDate(start.getDate() - parseInt(dias));
 
   const s = start.toISOString().split("T")[0];
   const e = end.toISOString().split("T")[0];
 
   fetch(`${METRICS_URL}/range?start=${s}&end=${e}`)
-    .then(r => r.json())
-    .then(data => showMetrics(data));
+    .then((r) => r.json())
+    .then((data) => {
+      showMetrics(data);
+      loadHourly(s, e);
+      loadCompare(s, e);
+    });
 }
 
 function showMetrics(data) {
@@ -290,6 +263,15 @@ function showMetrics(data) {
   renderTop(data);
 }
 
+// ---------- EXPORTAR A EXCEL ----------
+function exportarExcel() {
+  const s = document.getElementById("startDate").value || "all";
+  const e = document.getElementById("endDate").value || "all";
+
+  window.location.href = `${METRICS_URL}/export?start=${s}&end=${e}`;
+}
+
+// ---------- GRÁFICAS ----------
 function renderPie(data) {
   const ctx = document.getElementById("pieChart");
 
@@ -305,7 +287,7 @@ function renderPie(data) {
           backgroundColor: ["#007bff", "#28a745"],
         },
       ],
-    }
+    },
   });
 }
 
@@ -314,8 +296,8 @@ function renderBars(data) {
 
   if (barChart) barChart.destroy();
 
-  const labels = data.porDia.map(x => x._id);
-  const values = data.porDia.map(x => x.total);
+  const labels = data.porDia.map((x) => x._id);
+  const values = data.porDia.map((x) => x.total);
 
   barChart = new Chart(ctx, {
     type: "bar",
@@ -332,13 +314,74 @@ function renderBars(data) {
   });
 }
 
+// ---------- TOP ----------
 function renderTop(data) {
   const list = document.getElementById("topList");
   list.innerHTML = "";
 
-  data.topPreguntas.forEach(item => {
+  data.topPreguntas.forEach((item) => {
     const li = document.createElement("li");
     li.textContent = `${item._id} — ${item.count} veces`;
     list.appendChild(li);
   });
+}
+
+// ---------- ACTIVIDAD POR HORA ----------
+function loadHourly(start, end) {
+  const url = start
+    ? `${METRICS_URL}/hourly?start=${start}&end=${end}`
+    : `${METRICS_URL}/hourly`;
+
+  fetch(url)
+    .then((r) => r.json())
+    .then((data) => {
+      const hours = data.porHora.map((x) => `${x._id}:00`);
+      const totals = data.porHora.map((x) => x.total);
+
+      const ctx = document.getElementById("hourlyChart");
+      if (hourlyChart) hourlyChart.destroy();
+
+      hourlyChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: hours,
+          datasets: [
+            {
+              label: "Mensajes por hora",
+              data: totals,
+              borderColor: "#ff5733",
+              tension: 0.3,
+            },
+          ],
+        },
+      });
+    });
+}
+
+// ---------- COMPARATIVA GEMINI VS OPENAI ----------
+function loadCompare(start, end) {
+  const url = start
+    ? `${METRICS_URL}/compare?start=${start}&end=${end}`
+    : `${METRICS_URL}/compare`;
+
+  fetch(url)
+    .then((r) => r.json())
+    .then((data) => {
+      const ctx = document.getElementById("compareChart");
+      if (compareChart) compareChart.destroy();
+
+      compareChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["Gemini", "OpenAI", "Personalizadas"],
+          datasets: [
+            {
+              label: "Respuestas generadas",
+              data: [data.gemini, data.openai, data.custom],
+              backgroundColor: ["#4285F4", "#111827", "#28a745"],
+            },
+          ],
+        },
+      });
+    });
 }
