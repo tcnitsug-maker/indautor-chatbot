@@ -100,28 +100,27 @@
       border-radius: 4px;
       background: #eee;
     }
-    .badge.user {
-      background: #d1e7ff;
-    }
-    .badge.bot {
-      background: #d4edda;
-    }
-    .badge.custom {
-      background: #fff3cd;
-    }
+    .badge.user { background: #d1e7ff; }
+    .badge.bot { background: #d4edda; }
+    .badge.custom { background: #fff3cd; }
+
     .small {
       font-size: 12px;
       color: #666;
     }
   </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
   <header>
     <h1>Panel Administrativo - INDARELÍN</h1>
   </header>
 
   <main>
-    <!-- Login -->
+
+    <!-- LOGIN -->
     <section id="loginBox">
       <h2>Acceso administrador</h2>
       <p>Ingresa la contraseña:</p>
@@ -131,14 +130,16 @@
       <p id="loginError" style="color:red; display:none;">Contraseña incorrecta</p>
     </section>
 
-    <!-- Panel -->
+    <!-- PANEL -->
     <section id="panelBox" style="display:none;">
+
+      <!-- TABS -->
       <div class="tabs">
         <div class="tab active" data-tab="tabMessages">Historial de conversaciones</div>
         <div class="tab" data-tab="tabCustom">Respuestas personalizadas</div>
       </div>
 
-      <!-- Historial -->
+      <!-- HISTORIAL -->
       <div id="tabMessages" class="tab-content active">
         <button onclick="loadMessages()">🔄 Recargar</button>
         <table>
@@ -154,9 +155,10 @@
         </table>
       </div>
 
-      <!-- Respuestas personalizadas -->
+      <!-- RESPUESTAS PERSONALIZADAS -->
       <div id="tabCustom" class="tab-content">
         <h3>Respuestas personalizadas</h3>
+
         <form id="customForm">
           <input type="hidden" id="customId" />
 
@@ -167,11 +169,12 @@
           <textarea id="customAnswer" rows="4" required></textarea>
 
           <label>Palabras clave (separadas por coma)</label>
-          <input type="text" id="customKeywords" placeholder="ej. pensión, custodia, violencia" />
+          <input type="text" id="customKeywords" placeholder="ej. pensión, custodia" />
 
           <label>
             <input type="checkbox" id="customEnabled" checked /> Activar esta respuesta
           </label>
+
           <br /><br />
           <button type="submit">Guardar</button>
           <button type="button" onclick="resetCustomForm()" style="background:#777;">Limpiar</button>
@@ -183,7 +186,7 @@
             <tr>
               <th>Pregunta</th>
               <th>Respuesta</th>
-              <th>Palabras clave</th>
+              <th>Keywords</th>
               <th>Activa</th>
               <th>Acciones</th>
             </tr>
@@ -191,6 +194,34 @@
           <tbody id="customTable"></tbody>
         </table>
       </div>
+
+      <!-- 📊 MÉTRICAS COMPLETAS -->
+      <div id="metricsBox" style="margin-top:20px; padding:15px; background:#fff; border-radius:8px;">
+        <h3>Métricas del Chatbot</h3>
+
+        <p><b>Total mensajes:</b> <span id="m_total"></span></p>
+        <p><b>OpenAI:</b> <span id="m_openai"></span></p>
+        <p><b>Gemini:</b> <span id="m_gemini"></span></p>
+        <p><b>Personalizados:</b> <span id="m_custom"></span></p>
+
+        <hr>
+
+        <h4>📊 Actividad últimos 7 días</h4>
+        <canvas id="chartDays" style="max-width:600px;"></canvas>
+
+        <h4>🕒 Horas pico (0–23 hrs)</h4>
+        <canvas id="chartHours" style="max-width:600px;"></canvas>
+
+        <h4>📅 Mensajes últimos 30 días</h4>
+        <canvas id="chartMonth" style="max-width:600px;"></canvas>
+
+        <h4>📅 Comparación semanal</h4>
+        <canvas id="chartWeeks" style="max-width:600px;"></canvas>
+
+        <h4>🔎 Palabras más usadas</h4>
+        <ul id="topWords"></ul>
+      </div>
+
     </section>
   </main>
 
