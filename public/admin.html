@@ -8,127 +8,122 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f2f2f2;
+      background: #eef1f5;
       margin: 0;
       padding: 0;
     }
+
     header {
       background: #004aad;
       color: #fff;
-      padding: 10px 20px;
+      padding: 12px 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
-    header h1 {
-      margin: 0;
-      font-size: 20px;
-    }
+    header h1 { margin: 0; font-size: 22px; }
+
     main {
       padding: 20px;
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
     }
+
     #loginBox, #panelBox {
       background: #fff;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       margin-bottom: 20px;
     }
-    label {
-      display: block;
-      margin-top: 10px;
-    }
-    input[type="password"],
-    input[type="text"],
-    textarea {
+
+    input, textarea {
       width: 100%;
-      padding: 8px;
-      box-sizing: border-box;
-      margin-top: 4px;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-top: 5px;
     }
+
     button {
       background: #004aad;
       color: #fff;
       border: none;
-      border-radius: 4px;
-      padding: 8px 12px;
+      border-radius: 6px;
+      padding: 9px 14px;
       cursor: pointer;
     }
-    button:hover {
-      opacity: 0.9;
-    }
+
     .tabs {
       display: flex;
-      border-bottom: 1px solid #ccc;
-      margin-bottom: 10px;
+      gap: 10px;
+      margin-bottom: 15px;
     }
+
     .tab {
-      padding: 8px 14px;
+      padding: 10px 14px;
       cursor: pointer;
-      border-radius: 6px 6px 0 0;
-      margin-right: 5px;
-      background: #eee;
-    }
-    .tab.active {
-      background: #fff;
-      border-bottom: 2px solid #004aad;
+      border-radius: 8px;
+      background: #dce3ee;
       font-weight: bold;
+      transition: 0.2s;
     }
-    .tab-content {
-      display: none;
+
+    .tab.active {
+      background: #004aad;
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
-    .tab-content.active {
-      display: block;
-    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 14px;
+      margin-top: 12px;
     }
+
     th, td {
       border: 1px solid #ddd;
-      padding: 6px;
-      vertical-align: top;
+      padding: 7px;
+      font-size: 14px;
     }
-    th {
-      background: #f7f7f7;
-    }
+
+    th { background: #f3f3f3; }
+
     .badge {
-      display: inline-block;
-      padding: 2px 6px;
+      padding: 3px 7px;
+      border-radius: 5px;
       font-size: 11px;
-      border-radius: 4px;
-      background: #eee;
+      font-weight: bold;
     }
+
     .badge.user { background: #d1e7ff; }
     .badge.bot { background: #d4edda; }
     .badge.custom { background: #fff3cd; }
 
-    .small {
-      font-size: 12px;
-      color: #666;
-    }
     .cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
-}
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
 
-.card {
-  background: #ffffff;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  text-align: center;
-  font-size: 16px;
-  font-weight: bold;
-}
+    .card {
+      background: white;
+      padding: 18px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      font-size: 16px;
+    }
 
-.card span {
-  font-size: 24px;
-  color: #004aad;
-}
+    .card span {
+      display: block;
+      margin-top: 8px;
+      font-size: 26px;
+      color: #004aad;
+      font-weight: bold;
+    }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -146,7 +141,7 @@
       <h2>Acceso administrador</h2>
       <p>Ingresa la contraseña:</p>
       <input type="password" id="adminPass" placeholder="Contraseña" />
-      <br /><br />
+      <br><br>
       <button onclick="loginAdmin()">Entrar</button>
       <p id="loginError" style="color:red; display:none;">Contraseña incorrecta</p>
     </section>
@@ -155,16 +150,16 @@
     <section id="panelBox" style="display:none;">
 
       <!-- TABS -->
-     <div class="tabs">
-      <div class="tab active" data-tab="tabMessages">💬 Historial</div>
-      <div class="tab" data-tab="tabCustom">📝 Personalizadas</div>
-      <div class="tab" data-tab="tabMetrics">📊 Métricas</div>
-     </div>
-
+      <div class="tabs">
+        <div class="tab active" data-tab="tabMessages">💬 Historial</div>
+        <div class="tab" data-tab="tabCustom">📝 Personalizadas</div>
+        <div class="tab" data-tab="tabMetrics">📊 Métricas</div>
+      </div>
 
       <!-- HISTORIAL -->
       <div id="tabMessages" class="tab-content active">
         <button onclick="loadMessages()">🔄 Recargar</button>
+
         <table>
           <thead>
             <tr>
@@ -180,6 +175,7 @@
 
       <!-- RESPUESTAS PERSONALIZADAS -->
       <div id="tabCustom" class="tab-content">
+
         <h3>Respuestas personalizadas</h3>
 
         <form id="customForm">
@@ -189,16 +185,16 @@
           <input type="text" id="customQuestion" required />
 
           <label>Respuesta</label>
-          <textarea id="customAnswer" rows="4" required></textarea>
+          <textarea id="customAnswer" required rows="4"></textarea>
 
-          <label>Palabras clave (separadas por coma)</label>
+          <label>Palabras clave</label>
           <input type="text" id="customKeywords" placeholder="ej. pensión, custodia" />
 
           <label>
-            <input type="checkbox" id="customEnabled" checked /> Activar esta respuesta
+            <input type="checkbox" id="customEnabled" checked /> Activa
           </label>
 
-          <br /><br />
+          <br><br>
           <button type="submit">Guardar</button>
           <button type="button" onclick="resetCustomForm()" style="background:#777;">Limpiar</button>
         </form>
@@ -218,35 +214,39 @@
         </table>
       </div>
 
-      <!-- 📊 MÉTRICAS COMPLETAS -->
+      <!-- MÉTRICAS -->
       <div id="tabMetrics" class="tab-content">
-  <h2>📊 Métricas del Chatbot</h2>
 
-  <div class="cards">
-    <div class="card">Total mensajes<br><span id="m_total"></span></div>
-    <div class="card">OpenAI<br><span id="m_openai"></span></div>
-    <div class="card">Gemini<br><span id="m_gemini"></span></div>
-    <div class="card">Personalizadas<br><span id="m_custom"></span></div>
-  </div>
+        <h2>📊 Métricas del Chatbot</h2>
 
-  <h3>Actividad últimos 7 días</h3>
-  <canvas id="chartDays"></canvas>
+        <div class="cards">
+          <div class="card">Total mensajes <span id="m_total"></span></div>
+          <div class="card">OpenAI <span id="m_openai"></span></div>
+          <div class="card">Gemini <span id="m_gemini"></span></div>
+          <div class="card">Personalizadas <span id="m_custom"></span></div>
+        </div>
 
-  <h3>Horas pico (0–23 hrs)</h3>
-  <canvas id="chartHours"></canvas>
+        <h3>Actividad últimos 7 días</h3>
+        <canvas id="chartDays"></canvas>
 
-  <h3>Últimos 30 días</h3>
-  <canvas id="chartMonth"></canvas>
+        <h3>Horas pico</h3>
+        <canvas id="chartHours"></canvas>
 
-  <h3>Comparación semanal</h3>
-  <canvas id="chartWeeks"></canvas>
+        <h3>Últimos 30 días</h3>
+        <canvas id="chartMonth"></canvas>
 
-  <h3>Palabras más usadas</h3>
-  <ul id="topWords"></ul>
-  </div>
+        <h3>Comparación semanal</h3>
+        <canvas id="chartWeeks"></canvas>
+
+        <h3>Palabras más usadas</h3>
+        <ul id="topWords"></ul>
+
+      </div>
     </section>
+
   </main>
 
   <script src="admin.js"></script>
+
 </body>
 </html>
