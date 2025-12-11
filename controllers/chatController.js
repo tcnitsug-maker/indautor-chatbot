@@ -150,8 +150,11 @@ exports.sendChat = async (req, res) => {
     // Alternar para la próxima vez
     useGemini = !useGemini;
 
-    await Message.create({ role: "bot", text: reply });
-
+    await Message.create({
+  role: "bot",
+  text: reply,
+  source: source  
+});
     res.json({ reply, source });
   } catch (error) {
     console.error("Error en sendChat:", error);
