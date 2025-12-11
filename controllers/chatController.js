@@ -3,7 +3,7 @@ const CustomReply = require("../models/CustomReply");
 const fetch = require("node-fetch");
 
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
-const OPENAI_MODEL = "gpt-4.1-mini";
+const OPENAI_MODEL = "gpt-4o-mini";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
