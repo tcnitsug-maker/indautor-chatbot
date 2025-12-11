@@ -132,7 +132,6 @@
       padding: 5px 0;
       border-bottom: 1px solid #ddd;
     }
-
   </style>
 </head>
 <body>
@@ -180,6 +179,7 @@
       <!-- CUSTOM REPLIES -->
       <div id="tabCustom" class="tab-content">
         <h3>Respuestas personalizadas</h3>
+
         <form id="customForm">
           <input type="hidden" id="customId" />
 
@@ -195,6 +195,7 @@
           <label>
             <input type="checkbox" id="customEnabled" checked /> Activar esta respuesta
           </label>
+
           <br /><br />
           <button type="submit">Guardar</button>
           <button type="button" onclick="resetCustomForm()" style="background:#777;">Limpiar</button>
@@ -229,6 +230,9 @@
           <button onclick="filtroRapido('hoy')">Hoy</button>
           <button onclick="filtroRapido('7')">7 días</button>
           <button onclick="filtroRapido('30')">30 días</button>
+
+          <!-- EXPORTAR A EXCEL -->
+          <button onclick="exportarExcel()" style="background: green;">📥 Exportar Excel</button>
         </div>
 
         <!-- Tarjetas -->
@@ -253,12 +257,20 @@
         <h3>Actividad por día</h3>
         <canvas id="barChart"></canvas>
 
+        <!-- Nueva gráfica de horas -->
+        <h3>Actividad por hora</h3>
+        <canvas id="hourlyChart"></canvas>
+
+        <!-- Nueva gráfica comparativa -->
+        <h3>Comparativa Gemini vs OpenAI</h3>
+        <canvas id="compareChart"></canvas>
+
         <div class="top-list">
           <h3>Top preguntas</h3>
           <ul id="topList"></ul>
         </div>
 
-      </div> <!-- END TAB METRICS -->
+      </div>
     </section>
   </main>
 
