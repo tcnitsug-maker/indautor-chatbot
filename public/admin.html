@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Panel Administrativo - INDARELÍN</title>
 
   <style>
@@ -12,141 +12,188 @@
       margin: 0;
       padding: 0;
     }
-
-    #loginBox, #panelBox {
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.15);
-    }
-
-    #panelBox { display: none; }
-
-    h2 {
-      margin-top: 0;
-    }
-
-    input[type="password"] {
-      width: 100%;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #aaa;
-      margin-bottom: 10px;
-      font-size: 16px;
-    }
-
-    button {
+    header {
+      background: #004aad;
+      color: #fff;
       padding: 10px 20px;
-      background: #7A1731;
-      color: white;
-      border-radius: 6px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    main {
+      padding: 20px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    #loginBox, #panelBox {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input[type="password"],
+    input[type="text"],
+    textarea {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      margin-top: 4px;
+    }
+    button {
+      background: #004aad;
+      color: #fff;
       border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
       cursor: pointer;
-      font-size: 16px;
     }
-
     button:hover {
-      background: #5c0f24;
+      opacity: 0.9;
     }
-
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+    .tab {
+      padding: 8px 14px;
+      cursor: pointer;
+      border-radius: 6px 6px 0 0;
+      margin-right: 5px;
+      background: #eee;
+    }
+    .tab.active {
+      background: #fff;
+      border-bottom: 2px solid #004aad;
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 15px;
-    }
-
-    th, td {
-      border-bottom: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
-    }
-
-    .deleteBtn {
-      background: #c62828;
-      padding: 5px 12px;
-      border-radius: 6px;
-      color: white;
+      margin-top: 10px;
       font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px;
+      vertical-align: top;
+    }
+    th {
+      background: #f7f7f7;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      font-size: 11px;
+      border-radius: 4px;
+      background: #eee;
+    }
+    .badge.user {
+      background: #d1e7ff;
+    }
+    .badge.bot {
+      background: #d4edda;
+    }
+    .badge.custom {
+      background: #fff3cd;
+    }
+    .small {
+      font-size: 12px;
+      color: #666;
     }
   </style>
 </head>
-
 <body>
+  <header>
+    <h1>Panel Administrativo - INDARELÍN</h1>
+  </header>
 
-<div id="loginBox">
-  <h2>Acceso Administrador INDARELÍN</h2>
-  <p>Introduce la contraseña administrativa para acceder al panel.</p>
+  <main>
+    <!-- Login -->
+    <section id="loginBox">
+      <h2>Acceso administrador</h2>
+      <p>Ingresa la contraseña:</p>
+      <input type="password" id="adminPass" placeholder="Contraseña" />
+      <br /><br />
+      <button onclick="loginAdmin()">Entrar</button>
+      <p id="loginError" style="color:red; display:none;">Contraseña incorrecta</p>
+    </section>
 
-  <input type="password" id="adminPass" placeholder="Contraseña">
-  <button onclick="loginAdmin()">Entrar</button>
+    <!-- Panel -->
+    <section id="panelBox" style="display:none;">
+      <div class="tabs">
+        <div class="tab active" data-tab="tabMessages">Historial de conversaciones</div>
+        <div class="tab" data-tab="tabCustom">Respuestas personalizadas</div>
+      </div>
 
-  <p id="loginError" style="color:red; display:none; font-weight:bold;">
-    Contraseña incorrecta.
-  </p>
-</div>
+      <!-- Historial -->
+      <div id="tabMessages" class="tab-content active">
+        <button onclick="loadMessages()">🔄 Recargar</button>
+        <table>
+          <thead>
+            <tr>
+              <th>Rol</th>
+              <th>Mensaje</th>
+              <th>Fecha</th>
+              <th>Eliminar</th>
+            </tr>
+          </thead>
+          <tbody id="messagesTable"></tbody>
+        </table>
+      </div>
 
-<div id="panelBox">
-  <h2>Panel Administrativo – INDARELÍN</h2>
+      <!-- Respuestas personalizadas -->
+      <div id="tabCustom" class="tab-content">
+        <h3>Respuestas personalizadas</h3>
+        <form id="customForm">
+          <input type="hidden" id="customId" />
 
-  <h3>Historial de Mensajes</h3>
-  <button onclick="loadMessages()">Recargar</button>
+          <label>Pregunta base</label>
+          <input type="text" id="customQuestion" required />
 
-  <table>
-    <thead>
-      <tr>
-        <th>Rol</th>
-        <th>Mensaje</th>
-        <th>Fecha</th>
-        <th>Eliminar</th>
-      </tr>
-    </thead>
-    <tbody id="messagesTable"></tbody>
-  </table>
+          <label>Respuesta</label>
+          <textarea id="customAnswer" rows="4" required></textarea>
 
-  <h3>Respuestas Personalizadas</h3>
-  <button onclick="loadCustomReplies()">Recargar</button>
+          <label>Palabras clave (separadas por coma)</label>
+          <input type="text" id="customKeywords" placeholder="ej. pensión, custodia, violencia" />
 
-  <table>
-    <thead>
-      <tr>
-        <th>Pregunta</th>
-        <th>Respuesta</th>
-        <th>Palabras Clave</th>
-        <th>Activa</th>
-        <th>Acción</th>
-      </tr>
-    </thead>
-    <tbody id="customTable"></tbody>
-  </table>
+          <label>
+            <input type="checkbox" id="customEnabled" checked /> Activar esta respuesta
+          </label>
+          <br /><br />
+          <button type="submit">Guardar</button>
+          <button type="button" onclick="resetCustomForm()" style="background:#777;">Limpiar</button>
+        </form>
 
-  <h3>Agregar / Editar Respuesta Personalizada</h3>
+        <h3>Listado</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Pregunta</th>
+              <th>Respuesta</th>
+              <th>Palabras clave</th>
+              <th>Activa</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="customTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
 
-  <form id="customForm">
-    <input type="hidden" id="customId">
-
-    <label>Pregunta:</label>
-    <input type="text" id="customQuestion" style="width:100%; padding:8px;"><br><br>
-
-    <label>Respuesta:</label>
-    <textarea id="customAnswer" style="width:100%; padding:8px;" rows="4"></textarea><br><br>
-
-    <label>Palabras clave (separadas por coma):</label>
-    <input type="text" id="customKeywords" style="width:100%; padding:8px;"><br><br>
-
-    <label>
-      <input type="checkbox" id="customEnabled" checked>
-      Activar esta respuesta
-    </label><br><br>
-
-    <button type="submit">Guardar</button>
-    <button type="button" onclick="resetCustomForm()" style="background:#777;">Limpiar</button>
-  </form>
-
-</div>
-
-<script src="admin.js"></script>
-
+  <script src="admin.js"></script>
 </body>
 </html>
