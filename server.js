@@ -4,20 +4,22 @@ const mongoose = require("mongoose");
 const path = require("path");
 require("dotenv").config();
 
+// RUTAS
 const chatRoutes = require("./routes/chatRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const customReplyRoutes = require("./routes/customReplyRoutes");
+const metricsRoutes = require("./routes/metricsRoutes");  // ← MÉTRICAS
 
 const app = express();
 
 // --------------------
-// 🔒 CORS
+// 🔒 CORS CONFIG
 // --------------------
 const allowedOrigins = [
-  "https://utneza.store",          // ✅ pon aquí TU dominio real en Hostinger
+  "https://utneza.store",
   "https://www.utneza.store",
   "http://localhost:3000",
-  "http://127.0.0.1:5500",
+  "http://127.0.0.1:5500"
 ];
 
 app.use(
@@ -25,8 +27,8 @@ app.use(
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
       if (allowedOrigins.includes(origin)) return cb(null, true);
-      // En desarrollo puedes permitir todo:
-      return cb(null, true);
+      console.warn("CORS BLOCKED:", origin);
+      return cb(null, false);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -59,9 +61,10 @@ app.use(express.static(path.join(__dirname, "public")));
 // --------------------
 // 📦 Rutas API
 // --------------------
-app.use("/chat", chatRoutes);                // POST /chat
-app.use("/admin", adminRoutes);             // login + mensajes
-app.use("/admin/custom-replies", customReplyRoutes); // CRUD respuestas personalizadas
+app.use("/chat", chatRoutes);                
+app.use("/admin", adminRoutes);             
+app.use("/admin/custom-replies", customReplyRoutes); 
+app.use("/metrics", metricsRoutes);  // ← HABILITAR MÉTRICAS AQUÍ
 
 // --------------------
 // 🌐 Ruta del panel administrativo (HTML)
