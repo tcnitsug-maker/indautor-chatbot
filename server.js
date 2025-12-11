@@ -14,8 +14,8 @@ const app = express();
 // 🔒 CORS
 // --------------------
 const allowedOrigins = [
-  "https://indarelin.com",          // ✅ pon aquí TU dominio real en Hostinger
-  "https://www.indarelin.com",
+  "https://utneza.store",          // ✅ pon aquí TU dominio real en Hostinger
+  "https://www.utneza.store",
   "http://localhost:3000",
   "http://127.0.0.1:5500",
 ];
