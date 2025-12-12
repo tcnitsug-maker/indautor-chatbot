@@ -1,113 +1,3 @@
-const Message = require("../models/Message");
-const CustomReply = require("../models/CustomReply");
-const fetch = require("node-fetch");
-
-const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";   // ← SOLO ESTA LÍNEA
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-let useGemini = true;
- // true = Gemini, false = OpenAI
-
-function normalizeText(text) {
-  return (text || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-}
-
-async function findCustomReply(userText) {
-  const normUser = normalizeText(userText);
-  const replies = await CustomReply.find({ enabled: true });
-
-  for (const r of replies) {
-    const nq = normalizeText(r.question);
-    if (normUser.includes(nq) || nq.includes(normUser)) {
-      return r.answer;
-    }
-    if (Array.isArray(r.keywords)) {
-      for (const kw of r.keywords) {
-        const nk = normalizeText(kw);
-        if (nk && normUser.includes(nk)) {
-          return r.answer;
-        }
-      }
-    }
-  }
-  return null;
-}
-
-async function callOpenAI(messages) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    console.warn("Falta OPENAI_API_KEY");
-    return "Por el momento no puedo consultar OpenAI (falta API key).";
-  }
-
-  const res = await fetch(OPENAI_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      messages,
-    }),
-  });
-
-  if (!res.ok) {
-    console.error("Error OpenAI:", await res.text());
-    return "Hubo un problema consultando OpenAI.";
-  }
-
-  const data = await res.json();
-  return (
-    data.choices?.[0]?.message?.content?.trim() ||
-    "No obtuve respuesta de OpenAI."
-  );
-}
-
-async function callGemini(messages) {
-  if (!GEMINI_API_KEY) {
-    console.warn("Falta GEMINI_API_KEY");
-    return "Por el momento no puedo consultar Gemini (falta API key).";
-  }
-
-  const promptText = messages
-    .map((m) => `${m.role === "user" ? "Usuario" : "Sistema"}: ${m.content}`)
-    .join("\n");
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: promptText }],
-        },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    console.error("Error Gemini:", await res.text());
-    return "Hubo un problema consultando Gemini.";
-  }
-
-  const data = await res.json();
-  const text =
-    data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
-    "No obtuve respuesta de Gemini.";
-  return text;
-}
-
 exports.sendChat = async (req, res) => {
   try {
     const userMessage = (req.body && req.body.message) || "";
@@ -116,22 +6,22 @@ exports.sendChat = async (req, res) => {
       return res.status(400).json({ reply: "Debes escribir un mensaje." });
     }
 
-    // Guardar mensaje de usuario
+    // Guardamos mensaje del usuario
     await Message.create({ role: "user", text: userMessage });
 
-    // 1️⃣ Revisar respuestas personalizadas primero
+    // 1️⃣ Respuesta personalizada
     const custom = await findCustomReply(userMessage);
     if (custom) {
-      await Message.create({ role: "bot", text: custom });
+      await Message.create({ role: "bot", text: custom, source: "custom" });
       return res.json({ reply: custom, source: "custom" });
     }
 
-    // 2️⃣ Si no hay respuesta personalizada, llamar IA
+    // 2️⃣ Construcción del prompt
     const messages = [
       {
         role: "system",
         content:
-          "Eres el asistente INDARELÍN. Responde de forma clara, respetuosa y útil. Si la pregunta es legal, responde de forma informativa (no das asesoría formal).",
+          "Eres el asistente INDARELÍN. Responde de forma clara, respetuosa y útil.",
       },
       { role: "user", content: userMessage },
     ];
@@ -139,23 +29,45 @@ exports.sendChat = async (req, res) => {
     let reply;
     let source;
 
-    if (useGemini) {
+    // 3️⃣ INTENTAR GEMINI PRIMERO
+    try {
       reply = await callGemini(messages);
       source = "gemini";
-    } else {
-      reply = await callOpenAI(messages);
-      source = "openai";
+
+      // Si Gemini responde vacío o con error
+      if (!reply || reply.includes("Hubo un problema")) {
+        throw new Error("Gemini falló");
+      }
+    } catch (errorGemini) {
+      console.warn("Gemini falló, intentando OpenAI...");
+
+      // 4️⃣ SI GEMINI FALLA → INTENTAR OPENAI
+      try {
+        reply = await callOpenAI(messages);
+        source = "openai";
+
+        if (!reply || reply.includes("Hubo un problema")) {
+          throw new Error("OpenAI falló");
+        }
+      } catch (errorOpenAI) {
+        console.warn("OpenAI también falló");
+
+        // 5️⃣ Fallback si ambos fallan
+        reply =
+          "En este momento estamos experimentando alta demanda. Por favor intenta nuevamente en unos minutos.";
+        source = "fallback";
+      }
     }
 
-    // Alternar para la próxima vez
-    useGemini = !useGemini;
-
+    // Guardar la respuesta del bot
     await Message.create({
-  role: "bot",
-  text: reply,
-  source: source  
-});
+      role: "bot",
+      text: reply,
+      source: source,
+    });
+
     res.json({ reply, source });
+
   } catch (error) {
     console.error("Error en sendChat:", error);
     res.status(500).json({ reply: "Error en el servidor." });
