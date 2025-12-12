@@ -1,279 +1,38 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Panel Administrativo - INDARELÍN</title>
-
-  <!-- Chart.js para gráficas -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #004aad;
-      color: #fff;
-      padding: 10px 20px;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 20px;
-    }
-    main {
-      padding: 20px;
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-    #loginBox, #panelBox {
-      background: #fff;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-    }
-    input[type="password"],
-    input[type="text"],
-    textarea {
-      width: 100%;
-      padding: 8px;
-      box-sizing: border-box;
-      margin-top: 4px;
-    }
-    button {
-      background: #004aad;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      padding: 8px 12px;
-      cursor: pointer;
-    }
-    button:hover {
-      opacity: 0.9;
-    }
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid #ccc;
-      margin-bottom: 10px;
-    }
-    .tab {
-      padding: 8px 14px;
-      cursor: pointer;
-      border-radius: 6px 6px 0 0;
-      margin-right: 5px;
-      background: #eee;
-    }
-    .tab.active {
-      background: #fff;
-      border-bottom: 2px solid #004aad;
-      font-weight: bold;
-    }
-    .tab-content {
-      display: none;
-    }
-    .tab-content.active {
-      display: block;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 6px;
-      vertical-align: top;
-    }
-    th {
-      background: #f7f7f7;
-    }
-
-    /* Tarjetas de métricas */
-    .metric-cards {
-      display: flex;
-      gap: 20px;
-      margin: 20px 0;
-    }
-    .metric-card {
-      flex: 1;
-      background: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    .metric-card h3 {
-      margin: 0 0 10px;
-    }
-    .metric-card p {
-      font-size: 24px;
-      color: #004aad;
-      margin: 0;
-    }
-
-    /* Lista top */
-    .top-list {
-      margin-top: 20px;
-      background: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    .top-list li {
-      padding: 5px 0;
-      border-bottom: 1px solid #ddd;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Panel Administrativo - INDARELÍN</title>
+<link rel="stylesheet" href="admin.css" />
 </head>
+
 <body>
   <header>
-    <h1>Panel Administrativo - INDARELÍN</h1>
+    <h1>Panel Administrativo INDARELÍN</h1>
   </header>
 
   <main>
-    <!-- Login -->
-    <section id="loginBox">
-      <h2>Acceso administrador</h2>
-      <p>Ingresa la contraseña:</p>
-      <input type="password" id="adminPass" placeholder="Contraseña" />
-      <br /><br />
-      <button onclick="loginAdmin()">Entrar</button>
-      <p id="loginError" style="color:red; display:none;">Contraseña incorrecta</p>
-    </section>
+    <h2>📌 IPs Conectadas</h2>
+    <button onclick="loadIPs()">🔄 Recargar IPs</button>
 
-    <!-- Panel -->
-    <section id="panelBox" style="display:none;">
+    <table id="ipTable">
+      <thead>
+        <tr>
+          <th>IP</th>
+          <th>Total mensajes</th>
+          <th>Última vez</th>
+          <th>Ubicación</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-      <!-- TABS -->
-      <div class="tabs">
-        <div class="tab active" data-tab="tabMessages">Historial</div>
-        <div class="tab" data-tab="tabCustom">Respuestas Personalizadas</div>
-        <div class="tab" data-tab="tabMetrics">📊 Métricas</div>
-      </div>
-
-      <!-- HISTORIAL -->
-      <div id="tabMessages" class="tab-content active">
-        <button onclick="loadMessages()">🔄 Recargar</button>
-        <table>
-          <thead>
-            <tr>
-              <th>Rol</th>
-              <th>Mensaje</th>
-              <th>Fecha</th>
-              <th>Eliminar</th>
-            </tr>
-          </thead>
-          <tbody id="messagesTable"></tbody>
-        </table>
-      </div>
-
-      <!-- CUSTOM REPLIES -->
-      <div id="tabCustom" class="tab-content">
-        <h3>Respuestas personalizadas</h3>
-
-        <form id="customForm">
-          <input type="hidden" id="customId" />
-
-          <label>Pregunta base</label>
-          <input type="text" id="customQuestion" required />
-
-          <label>Respuesta</label>
-          <textarea id="customAnswer" rows="4" required></textarea>
-
-          <label>Palabras clave (separadas por coma)</label>
-          <input type="text" id="customKeywords" placeholder="ej. pago, certificado, registro" />
-
-          <label>
-            <input type="checkbox" id="customEnabled" checked /> Activar esta respuesta
-          </label>
-
-          <br /><br />
-          <button type="submit">Guardar</button>
-          <button type="button" onclick="resetCustomForm()" style="background:#777;">Limpiar</button>
-        </form>
-
-        <h3>Listado</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Pregunta</th>
-              <th>Respuesta</th>
-              <th>Palabras clave</th>
-              <th>Activa</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="customTable"></tbody>
-        </table>
-      </div>
-
-      <!-- MÉTRICAS -->
-      <div id="tabMetrics" class="tab-content">
-
-        <h2>📊 Métricas del Chatbot</h2>
-
-        <!-- Filtros -->
-        <div style="margin-bottom:20px;">
-          <label>Inicio: <input type="date" id="startDate"></label>
-          <label>Fin: <input type="date" id="endDate"></label>
-          <button onclick="consultarRango()">Filtrar</button>
-
-          <button onclick="filtroRapido('hoy')">Hoy</button>
-          <button onclick="filtroRapido('7')">7 días</button>
-          <button onclick="filtroRapido('30')">30 días</button>
-
-          <!-- EXPORTAR A EXCEL -->
-          <button onclick="exportarExcel()" style="background: green;">📥 Exportar Excel</button>
-        </div>
-
-        <!-- Tarjetas -->
-        <div class="metric-cards">
-          <div class="metric-card">
-            <h3>Total mensajes</h3>
-            <p id="m_total">0</p>
-          </div>
-          <div class="metric-card">
-            <h3>IA</h3>
-            <p id="m_ia">0</p>
-          </div>
-          <div class="metric-card">
-            <h3>Personalizadas</h3>
-            <p id="m_custom">0</p>
-          </div>
-        </div>
-
-        <h3>Distribución IA vs Personalizadas</h3>
-        <canvas id="pieChart"></canvas>
-
-        <h3>Actividad por día</h3>
-        <canvas id="barChart"></canvas>
-
-        <!-- Nueva gráfica de horas -->
-        <h3>Actividad por hora</h3>
-        <canvas id="hourlyChart"></canvas>
-
-        <!-- Nueva gráfica comparativa -->
-        <h3>Comparativa Gemini vs OpenAI</h3>
-        <canvas id="compareChart"></canvas>
-
-        <div class="top-list">
-          <h3>Top preguntas</h3>
-          <ul id="topList"></ul>
-        </div>
-
-      </div>
-    </section>
+    <h2>📜 Historial por IP</h2>
+    <div id="historyBox"></div>
   </main>
 
-  <script src="admin.js"></script>
+<script src="admin.js"></script>
 </body>
 </html>
