@@ -1,15 +1,15 @@
 body {
   font-family: Arial, sans-serif;
-  background: #f0f2f5;
   margin: 0;
-  padding: 0;
+  background: #f0f2f5;
 }
 
 header {
   background: #004aad;
   color: #fff;
-  padding: 15px;
+  padding: 18px;
   text-align: center;
+  font-size: 22px;
 }
 
 main {
@@ -18,24 +18,25 @@ main {
 
 table {
   width: 100%;
-  background: white;
   border-collapse: collapse;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  background: white;
+  box-shadow: 0 2px 7px rgba(0,0,0,0.2);
 }
 
-table th, table td {
+th {
+  background: #004aad;
+  color: white;
+  padding: 10px;
+}
+
+td {
   padding: 10px;
   border-bottom: 1px solid #ddd;
 }
 
-table th {
-  background: #004aad;
-  color: white;
-}
-
 button {
-  padding: 8px 15px;
-  background: #005eff;
+  padding: 7px 12px;
+  background: #0066ff;
   color: white;
   border: none;
   border-radius: 6px;
@@ -43,13 +44,13 @@ button {
 }
 
 button:hover {
-  background: #0041c1;
+  background: #004acc;
 }
 
 #historyBox {
-  margin-top: 20px;
   padding: 15px;
   background: white;
-  border-radius: 6px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  border-radius: 6px;
+  margin-top: 15px;
 }
