@@ -1,389 +1,10 @@
-// URL base del backend
-const API_BASE = "https://indautor-chatbot-1.onrender.com";
-const API_URL = `${API_BASE}/admin`;
-const CUSTOM_URL = `${API_BASE}/admin/custom-replies`;
-const METRICS_URL = `${API_BASE}/metrics`;
+const API = "/admin";
 
-let pieChart = null;
-let barChart = null;
-let hourlyChart = null;
-let compareChart = null;
-
-// ---------- LOGIN ----------
-function loginAdmin() {
-  const pass = document.getElementById("adminPass").value;
-
-  fetch(API_URL + "/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password: pass }),
-  })
-    .then((r) => r.json())
-    .then((data) => {
-      if (data.ok) {
-        document.getElementById("loginBox").style.display = "none";
-        document.getElementById("panelBox").style.display = "block";
-
-        loadMessages();
-        loadCustomReplies();
-        loadMetrics();
-      } else {
-        document.getElementById("loginError").style.display = "block";
-      }
-    })
-    .catch((err) => {
-      console.error("Error login:", err);
-      alert("Error en el login");
-    });
-}
-
-// ---------- TABS ----------
-document.addEventListener("click", (e) => {
-  if (e.target.classList.contains("tab")) {
-    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach((c) =>
-      c.classList.remove("active")
-    );
-
-    e.target.classList.add("active");
-    const tabId = e.target.getAttribute("data-tab");
-    document.getElementById(tabId).classList.add("active");
-
-    if (tabId === "tabMetrics") {
-      loadMetrics();
-    }
-  }
-});
-
-// ---------- HISTORIAL ----------
-function formatDate(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleString();
-}
-
-function escapeHtml(text) {
-  return String(text || "")
-    .replace(/&/g, "&amp;")
-    .replace(/`/g, "&#96;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function loadMessages() {
-  fetch(API_URL + "/messages")
-    .then((r) => r.json())
-    .then((messages) => {
-      const tbody = document.getElementById("messagesTable");
-      tbody.innerHTML = "";
-
-      messages.forEach((m) => {
-        const tr = document.createElement("tr");
-
-        const rolTd = document.createElement("td");
-        const badge = document.createElement("span");
-        badge.className = "badge " + (m.role === "user" ? "user" : "bot");
-        badge.textContent = m.role;
-        rolTd.appendChild(badge);
-
-        const textTd = document.createElement("td");
-        textTd.innerHTML = `<div class="small">${escapeHtml(m.text)}</div>`;
-
-        const dateTd = document.createElement("td");
-        dateTd.textContent = formatDate(m.createdAt);
-
-        const delTd = document.createElement("td");
-        const btn = document.createElement("button");
-        btn.textContent = "🗑️";
-        btn.onclick = () => deleteMessage(m._id);
-        delTd.appendChild(btn);
-
-        tr.appendChild(rolTd);
-        tr.appendChild(textTd);
-        tr.appendChild(dateTd);
-        tr.appendChild(delTd);
-
-        tbody.appendChild(tr);
-      });
-    })
-    .catch((err) => {
-      console.error("Error loading messages:", err);
-      alert("Error cargando mensajes");
-    });
-}
-
-function deleteMessage(id) {
-  if (!confirm("¿Eliminar este mensaje?")) return;
-
-  fetch(`${API_URL}/messages/${id}`, { method: "DELETE" })
-    .then(() => loadMessages())
-    .catch((err) => {
-      console.error("Error delete:", err);
-      alert("Error eliminando mensaje");
-    });
-}
-
-// ---------- CUSTOM REPLIES ----------
-function loadCustomReplies() {
-  fetch(CUSTOM_URL)
-    .then((r) => r.json())
-    .then((replies) => {
-      const tbody = document.getElementById("customTable");
-      tbody.innerHTML = "";
-
-      replies.forEach((r) => {
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-          <td><div class="small">${escapeHtml(r.question)}</div></td>
-          <td><div class="small">${escapeHtml(r.answer)}</div></td>
-          <td><div class="small">${escapeHtml((r.keywords || []).join(", "))}</div></td>
-          <td>${r.enabled ? "Sí" : "No"}</td>
-          <td>
-            <button onclick="fillCustomForm('${r._id}', '${escapeHtml(
-              r.question
-            )}', \`${escapeHtml(r.answer)}\`, '${(r.keywords || []).join(",")}', ${
-          r.enabled
-        })">✏️</button>
-            <button onclick="deleteCustomReply('${r._id}')">🗑️</button>
-          </td>
-        `;
-
-        tbody.appendChild(tr);
-      });
-    })
-    .catch((err) => console.error("Error loadCustomReplies:", err));
-}
-
-function fillCustomForm(id, question, answer, keywords, enabled) {
-  document.getElementById("customId").value = id;
-  document.getElementById("customQuestion").value = question;
-  document.getElementById("customAnswer").value = answer;
-  document.getElementById("customKeywords").value = keywords || "";
-  document.getElementById("customEnabled").checked = !!enabled;
-}
-
-function resetCustomForm() {
-  document.getElementById("customId").value = "";
-  document.getElementById("customQuestion").value = "";
-  document.getElementById("customAnswer").value = "";
-  document.getElementById("customKeywords").value = "";
-  document.getElementById("customEnabled").checked = true;
-}
-
-// Guardar / actualizar
-document.getElementById("customForm").addEventListener("submit", (e) => {
-  e.preventDefault();
-
-  const id = document.getElementById("customId").value;
-
-  const payload = {
-    question: document.getElementById("customQuestion").value,
-    answer: document.getElementById("customAnswer").value,
-    keywords: document.getElementById("customKeywords").value,
-    enabled: document.getElementById("customEnabled").checked,
-  };
-
-  const url = id ? `${CUSTOM_URL}/${id}` : CUSTOM_URL;
-  const method = id ? "PUT" : "POST";
-
-  fetch(url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  })
-    .then(() => {
-      resetCustomForm();
-      loadCustomReplies();
-    })
-    .catch((err) => console.error("Error guardando:", err));
-});
-
-function deleteCustomReply(id) {
-  if (!confirm("¿Eliminar esta respuesta personalizada?")) return;
-
-  fetch(`${CUSTOM_URL}/${id}`, { method: "DELETE" })
-    .then(loadCustomReplies)
-    .catch((err) => console.error("Error deleteCustomReply:", err));
-}
-
-// ---------- MÉTRICAS PRINCIPALES ----------
-function loadMetrics() {
-  fetch(METRICS_URL)
-    .then((r) => r.json())
-    .then((data) => {
-      showMetrics(data);
-      loadHourly();
-      loadCompare();
-    })
-    .catch((err) => console.error("Error cargando métricas:", err));
-}
-
-function consultarRango() {
-  const s = document.getElementById("startDate").value;
-  const e = document.getElementById("endDate").value;
-
-  if (!s || !e) return alert("Selecciona fechas");
-
-  fetch(`${METRICS_URL}/range?start=${s}&end=${e}`)
-    .then((r) => r.json())
-    .then((data) => {
-      showMetrics(data);
-      loadHourly(s, e);
-      loadCompare(s, e);
-    });
-}
-
-function filtroRapido(dias) {
-  let start = new Date();
-  let end = new Date();
-
-  if (dias !== "hoy") start.setDate(start.getDate() - parseInt(dias));
-
-  const s = start.toISOString().split("T")[0];
-  const e = end.toISOString().split("T")[0];
-
-  fetch(`${METRICS_URL}/range?start=${s}&end=${e}`)
-    .then((r) => r.json())
-    .then((data) => {
-      showMetrics(data);
-      loadHourly(s, e);
-      loadCompare(s, e);
-    });
-}
-
-function showMetrics(data) {
-  document.getElementById("m_total").textContent = data.total;
-  document.getElementById("m_ia").textContent = data.ia;
-  document.getElementById("m_custom").textContent = data.custom;
-
-  renderPie(data);
-  renderBars(data);
-  renderTop(data);
-}
-
-// ---------- EXPORTAR A EXCEL ----------
-function exportarExcel() {
-  const s = document.getElementById("startDate").value || "all";
-  const e = document.getElementById("endDate").value || "all";
-
-  window.location.href = `${METRICS_URL}/export?start=${s}&end=${e}`;
-}
-
-// ---------- GRÁFICAS ----------
-function renderPie(data) {
-  const ctx = document.getElementById("pieChart");
-
-  if (pieChart) pieChart.destroy();
-
-  pieChart = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: ["IA", "Personalizadas"],
-      datasets: [
-        {
-          data: [data.ia, data.custom],
-          backgroundColor: ["#007bff", "#28a745"],
-        },
-      ],
-    },
-  });
-}
-
-function renderBars(data) {
-  const ctx = document.getElementById("barChart");
-
-  if (barChart) barChart.destroy();
-
-  const labels = data.porDia.map((x) => x._id);
-  const values = data.porDia.map((x) => x.total);
-
-  barChart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Mensajes por día",
-          backgroundColor: "#17a2b8",
-          data: values,
-        },
-      ],
-    },
-  });
-}
-
-// ---------- TOP ----------
-function renderTop(data) {
-  const list = document.getElementById("topList");
-  list.innerHTML = "";
-
-  data.topPreguntas.forEach((item) => {
-    const li = document.createElement("li");
-    li.textContent = `${item._id} — ${item.count} veces`;
-    list.appendChild(li);
-  });
-}
-
-// ---------- ACTIVIDAD POR HORA ----------
-function loadHourly(start, end) {
-  const url = start
-    ? `${METRICS_URL}/hourly?start=${start}&end=${end}`
-    : `${METRICS_URL}/hourly`;
-
-  fetch(url)
-    .then((r) => r.json())
-    .then((data) => {
-      const hours = data.porHora.map((x) => `${x._id}:00`);
-      const totals = data.porHora.map((x) => x.total);
-
-      const ctx = document.getElementById("hourlyChart");
-      if (hourlyChart) hourlyChart.destroy();
-
-      hourlyChart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: hours,
-          datasets: [
-            {
-              label: "Mensajes por hora",
-              data: totals,
-              borderColor: "#ff5733",
-              tension: 0.3,
-            },
-          ],
-        },
-      });
-    });
-}
-
-// ---------- COMPARATIVA GEMINI VS OPENAI ----------
-function loadCompare(start, end) {
-  const url = start
-    ? `${METRICS_URL}/compare?start=${start}&end=${end}`
-    : `${METRICS_URL}/compare`;
-
-  fetch(url)
-    .then((r) => r.json())
-    .then((data) => {
-      const ctx = document.getElementById("compareChart");
-      if (compareChart) compareChart.destroy();
-
-      compareChart = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: ["Gemini", "OpenAI", "Personalizadas"],
-          datasets: [
-            {
-              label: "Respuestas generadas",
-              data: [data.gemini, data.openai, data.custom],
-              backgroundColor: ["#4285F4", "#111827", "#28a745"],
-              const API_URL = "/admin";
-
-// Cargar la lista de IPs
+// ---------------------------------------------
+// Cargar listado de IPs
+// ---------------------------------------------
 async function loadIPs() {
-  const res = await fetch(`${API_URL}/ips`);
+  const res = await fetch(`${API}/ips`);
   const data = await res.json();
 
   const tbody = document.querySelector("#ipTable tbody");
@@ -396,58 +17,49 @@ async function loadIPs() {
       <td>${ipInfo.ip}</td>
       <td>${ipInfo.total}</td>
       <td>${new Date(ipInfo.lastSeen).toLocaleString()}</td>
-      <td>
-        <button onclick="getLocation('${ipInfo.ip}')">
-          🌍 Ver ubicación
-        </button>
-      </td>
-      <td>
-        <button onclick="loadHistory('${ipInfo.ip}')">
-          📜 Historial
-        </button>
-      </td>
+      <td><button onclick="getLocation('${ipInfo.ip}')">🌍 Ver</button></td>
+      <td><button onclick="loadHistory('${ipInfo.ip}')">📜 Ver</button></td>
     `;
 
     tbody.appendChild(tr);
   });
 }
 
-// Obtener ubicación de una IP
+// ---------------------------------------------
+// Ver ubicación geográfica de una IP
+// ---------------------------------------------
 async function getLocation(ip) {
-  const res = await fetch(`${API_URL}/ipinfo/${ip}`);
+  const res = await fetch(`${API}/ipinfo/${ip}`);
   const data = await res.json();
 
   alert(`
-📍 Información de IP ${ip}
+📍 Información de la IP ${ip}
 
 País: ${data.country}
 Estado: ${data.regionName}
 Ciudad: ${data.city}
 ISP: ${data.isp}
-Lat: ${data.lat}
-Lon: ${data.lon}
+Latitud: ${data.lat}
+Longitud: ${data.lon}
   `);
 }
 
+// ---------------------------------------------
 // Cargar historial por IP
+// ---------------------------------------------
 async function loadHistory(ip) {
-  const res = await fetch(`/messages/ip/${ip}`);
-  const messages = await res.json();
+  const res = await fetch(`/admin/messages/ip/${ip}`);
+  const data = await res.json();
 
-  let html = `<h3>Historial de IP: ${ip}</h3><ul>`;
-  messages.forEach(msg => {
-    html += `<li><b>${msg.role}:</b> ${msg.text} <i>(${new Date(msg.createdAt).toLocaleString()})</i></li>`;
+  let html = `<h3>Historial de ${ip}</h3><ul>`;
+
+  data.forEach(m => {
+    html += `<li><b>${m.role}:</b> ${m.text} <i>(${new Date(m.createdAt).toLocaleString()})</i></li>`;
   });
+
   html += "</ul>";
 
   document.getElementById("historyBox").innerHTML = html;
 }
 
 loadIPs();
-
-            },
-          ],
-        },
-      });
-    });
-}
