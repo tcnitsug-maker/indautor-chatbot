@@ -3,7 +3,9 @@ const router = express.Router();
 const Message = require("../models/Message");
 const fetch = require("node-fetch");
 
-// Obtener lista de IPs con estadísticas
+// -----------------------------------------------
+// GET /admin/ips → Lista todas las IPs + estadísticas
+// -----------------------------------------------
 router.get("/ips", async (req, res) => {
   try {
     const messages = await Message.find({}, { ip: 1, createdAt: 1 }).lean();
@@ -12,29 +14,36 @@ router.get("/ips", async (req, res) => {
 
     for (const msg of messages) {
       if (!msg.ip) continue;
+
       if (!stats[msg.ip]) {
         stats[msg.ip] = {
           ip: msg.ip,
           total: 0,
-          lastSeen: 0
+          lastSeen: msg.createdAt,
         };
       }
 
       stats[msg.ip].total++;
-      stats[msg.ip].lastSeen = msg.createdAt;
+
+      if (msg.createdAt > stats[msg.ip].lastSeen) {
+        stats[msg.ip].lastSeen = msg.createdAt;
+      }
     }
 
     res.json(Object.values(stats));
   } catch (err) {
     console.error("Error obteniendo IPs:", err);
-    res.status(500).json({ error: "Error obteniendo IPs" });
+    res.status(500).json({ error: "Error al obtener lista de IPs" });
   }
 });
 
-// Obtener ubicación geográfica de una IP
+// -----------------------------------------------
+// GET /admin/ipinfo/:ip → Geolocalización de IP
+// -----------------------------------------------
 router.get("/ipinfo/:ip", async (req, res) => {
   try {
     const ip = req.params.ip;
+
     const url = `http://ip-api.com/json/${ip}?fields=status,country,regionName,city,isp,query,lat,lon`;
 
     const apiRes = await fetch(url);
@@ -42,8 +51,8 @@ router.get("/ipinfo/:ip", async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error("Error obteniendo info IP:", err);
-    res.status(500).json({ error: "No se pudo obtener información." });
+    console.error("Error obteniendo geolocalización:", err);
+    res.status(500).json({ error: "No se pudo obtener info de IP." });
   }
 });
 
