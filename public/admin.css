@@ -1,56 +1,88 @@
 body {
-  font-family: Arial, sans-serif;
   margin: 0;
-  background: #f0f2f5;
+  font-family: Arial, sans-serif;
+  background: #f4f6f9;
 }
 
 header {
   background: #004aad;
-  color: #fff;
-  padding: 18px;
+  color: white;
+  padding: 20px;
   text-align: center;
-  font-size: 22px;
+  font-size: 24px;
 }
 
-main {
+#navbar {
+  display: flex;
+  background: #002e6d;
+}
+
+#navbar button {
+  flex: 1;
+  padding: 15px;
+  background: #003b86;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+#navbar button:hover {
+  background: #0051c9;
+}
+
+.tab-content {
+  display: none;
   padding: 20px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.cards {
+  display: flex;
+  gap: 20px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  flex: 1;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.card h3 {
+  margin-top: 0;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   background: white;
-  box-shadow: 0 2px 7px rgba(0,0,0,0.2);
 }
 
-th {
+table th {
   background: #004aad;
   color: white;
   padding: 10px;
 }
 
-td {
+table td {
   padding: 10px;
   border-bottom: 1px solid #ddd;
 }
 
 button {
-  padding: 7px 12px;
-  background: #0066ff;
+  padding: 10px 15px;
+  background: #004aad;
   color: white;
   border: none;
-  border-radius: 6px;
   cursor: pointer;
+  border-radius: 6px;
 }
 
 button:hover {
-  background: #004acc;
-}
-
-#historyBox {
-  padding: 15px;
-  background: white;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  border-radius: 6px;
-  margin-top: 15px;
+  background: #003b86;
 }
