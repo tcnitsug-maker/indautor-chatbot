@@ -9,6 +9,7 @@ const chatRoutes = require("./routes/chatRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const customReplyRoutes = require("./routes/customReplyRoutes");
 const metricsRoutes = require("./routes/metricsRoutes");  // ← MÉTRICAS
+app.use("/admin", require("./routes/adminRoutes"));
 
 const app = express();
 
