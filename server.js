@@ -1,83 +1,89 @@
+// ======================================================
+// SERVER.JS COMPLETO - INDARELÍN CHATBOT
+// ======================================================
+
+// ------------ IMPORTS GENERALES ------------
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const path = require("path");
 require("dotenv").config();
 
-// RUTAS
-const chatRoutes = require("./routes/chatRoutes");
-const adminRoutes = require("./routes/adminRoutes");
-const customReplyRoutes = require("./routes/customReplyRoutes");
-const metricsRoutes = require("./routes/metricsRoutes");  // ← MÉTRICAS
-app.use("/admin", require("./routes/adminRoutes"));
-
+// ------------ INICIALIZAR SERVIDOR ------------
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-// --------------------
-// 🔒 CORS CONFIG
-// --------------------
-const allowedOrigins = [
-  "https://utneza.store",
-  "https://www.utneza.store",
-  "http://localhost:3000",
-  "http://127.0.0.1:5500"
-];
-
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      console.warn("CORS BLOCKED:", origin);
-      return cb(null, false);
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-// --------------------
-// 🧩 Middlewares
-// --------------------
+// ------------ MIDDLEWARES ------------
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --------------------
-// 🗄️ Conexión a MongoDB
-// --------------------
-const MONGO_URI =
-  process.env.MONGO_URI ||
-  "mongodb+srv://TU_USER:TU_PASS@TU_CLUSTER.mongodb.net/chatbot";
+// ------------ ARCHIVOS ESTÁTICOS (PANEL ADMIN) ------------
+app.use(express.static(path.join(__dirname, "public")));
+
+// ======================================================
+// CONEXIÓN A MONGODB
+// ======================================================
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+  console.error("❌ ERROR: Falta variable de entorno MONGO_URI");
+  process.exit(1);
+}
 
 mongoose
   .connect(MONGO_URI)
   .then(() => console.log("✅ Conectado a MongoDB"))
-  .catch((err) => console.error("❌ Error MongoDB:", err));
+  .catch((err) => console.error("❌ Error conectando a MongoDB:", err));
 
-// --------------------
-// 📂 Archivos estáticos (admin panel)
-// --------------------
-app.use(express.static(path.join(__dirname, "public")));
 
-// --------------------
-// 📦 Rutas API
-// --------------------
-app.use("/chat", chatRoutes);                
-app.use("/admin", adminRoutes);             
-app.use("/admin/custom-replies", customReplyRoutes); 
-app.use("/metrics", metricsRoutes);  // ← HABILITAR MÉTRICAS AQUÍ
+// ======================================================
+// IMPORTAR RUTAS Y CONTROLADORES
+// ======================================================
 
-// --------------------
-// 🌐 Ruta del panel administrativo (HTML)
-// --------------------
-app.get("/admin-panel", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
+// CHATBOT
+const chatController = require("./controllers/chatController");
+
+// ADMIN
+const adminRoutes = require("./routes/adminRoutes");
+
+
+// ======================================================
+// RUTAS DEL CHATBOT
+// ======================================================
+
+// Endpoint principal del chatbot
+app.post("/chat", chatController.sendChat);
+
+
+// ======================================================
+// RUTAS DE PANEL ADMINISTRATIVO
+// ======================================================
+app.use("/admin", adminRoutes);
+
+
+// ======================================================
+// RUTA HOME (Opcional)
+// ======================================================
+app.get("/", (req, res) => {
+  res.send("✔ INDARELÍN Chatbot API funcionando correctamente.");
 });
 
-// --------------------
-// 🟢 Iniciar servidor
-// --------------------
-const PORT = process.env.PORT || 10000;
+
+// ======================================================
+// MANEJO DE ERRORES GLOBALES
+// ======================================================
+app.use((err, req, res, next) => {
+  console.error("❌ ERROR INTERNO:", err);
+  res.status(500).json({
+    error: "Error interno del servidor",
+  });
+});
+
+
+// ======================================================
+// INICIAR SERVIDOR
+// ======================================================
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
+  console.log(`🚀 Servidor INDARELÍN funcionando en http://localhost:${PORT}`);
 });
