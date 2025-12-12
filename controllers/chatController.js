@@ -1,146 +1,73 @@
 //-----------------------------------------------------------------------
-// CONTROLADOR DE CHAT — VERSIÓN OPTIMIZADA PROFESIONAL
+// SISTEMA ANTI-SPAM / ANTI-FLOOD POR IP
 //-----------------------------------------------------------------------
 
-const Message = require("../models/Message");
-const CustomReply = require("../models/CustomReply");
-const fetch = require("node-fetch");
+const floodMap = new Map(); // { ip: { lastTime, count, blockedUntil } }
 
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+function checkFlood(ip) {
+  const now = Date.now();
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
-//-----------------------------------------------------------------------
-// NORMALIZAR TEXTO PARA BÚSQUEDAS
-//-----------------------------------------------------------------------
-function normalize(text) {
-  return (text || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-}
-
-//-----------------------------------------------------------------------
-// RESPUESTAS PERSONALIZADAS
-//-----------------------------------------------------------------------
-async function findCustomReply(userText) {
-  const normUser = normalize(userText);
-  const replies = await CustomReply.find({ enabled: true });
-
-  for (const r of replies) {
-    const nq = normalize(r.question);
-
-    // Coincidencia exacta o parcial
-    if (normUser.includes(nq) || nq.includes(normUser)) {
-      return r.answer;
-    }
-
-    // Coincidencia con keywords
-    if (Array.isArray(r.keywords)) {
-      for (const kw of r.keywords) {
-        const nk = normalize(kw);
-        if (nk && normUser.includes(nk)) {
-          return r.answer;
-        }
-      }
-    }
+  if (!floodMap.has(ip)) {
+    floodMap.set(ip, { lastTime: 0, count: 0, blockedUntil: 0 });
   }
-  return null;
-}
 
-//-----------------------------------------------------------------------
-// CALL OPENAI CON OPTIMIZACIÓN
-//-----------------------------------------------------------------------
-async function callOpenAI(messages) {
-  if (!OPENAI_API_KEY) return null;
+  const data = floodMap.get(ip);
 
-  try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        messages,
-        max_tokens: 400,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!res.ok) {
-      console.error("❌ OpenAI error:", await res.text());
-      return null;
-    }
-
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() || null;
-
-  } catch (err) {
-    console.error("❌ Error llamando OpenAI:", err);
-    return null;
+  // Si está bloqueado
+  if (now < data.blockedUntil) {
+    return { blocked: true, wait: data.blockedUntil - now };
   }
-}
 
-//-----------------------------------------------------------------------
-// CALL GEMINI CON OPTIMIZACIÓN
-//-----------------------------------------------------------------------
-async function callGemini(messages) {
-  if (!GEMINI_API_KEY) return null;
+  // Tiempo entre mensajes
+  const diff = now - data.lastTime;
 
-  try {
-    const prompt = messages
-      .map((m) => `${m.role === "user" ? "Usuario" : "Sistema"}: ${m.content}`)
-      .join("\n");
+  if (diff < FLOOD_MIN_DELAY) {
+    data.count++;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          maxOutputTokens: 400,
-          temperature: 0.7,
-        },
-      }),
-    });
-
-    if (!res.ok) {
-      console.error("❌ Gemini error:", await res.text());
-      return null;
+    if (data.count >= FLOOD_MAX_BURST) {
+      // Bloquear al usuario
+      data.blockedUntil = now + FLOOD_BLOCK_TIME;
+      data.count = 0;
+      return { blocked: true, wait: FLOOD_BLOCK_TIME };
     }
-
-    const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    return text || null;
-
-  } catch (err) {
-    console.error("❌ Error llamando Gemini:", err);
-    return null;
+  } else {
+    // Se resetea contador si ya pasó tiempo
+    data.count = 0;
   }
+
+  data.lastTime = now;
+  floodMap.set(ip, data);
+  return { blocked: false };
 }
 
 //-----------------------------------------------------------------------
-// FUNCIÓN CENTRAL OPTIMIZADA
+// CONTROLADOR PRINCIPAL
 //-----------------------------------------------------------------------
+
 exports.sendChat = async (req, res) => {
   try {
+    const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.ip;
+
+    // 1️⃣ Verificación anti-flood
+    const flood = checkFlood(ip);
+    if (flood.blocked) {
+      const sec = Math.ceil(flood.wait / 1000);
+      return res.json({
+        reply: `Por favor espera ${sec} segundos antes de enviar otro mensaje.`,
+        source: "flood-protection",
+      });
+    }
+
     const userMessage = req.body?.message?.trim();
     if (!userMessage) {
       return res.status(400).json({ reply: "Debes escribir un mensaje." });
     }
 
     // Guardar mensaje del usuario
-    await Message.create({ role: "user", text: userMessage });
+    await Message.create({ role: "user", text: userMessage, ip });
 
     //-------------------------------------------------------------------
-    // 1️⃣ REVISAR RESPUESTAS PERSONALIZADAS
+    // 2️⃣ Respuesta personalizada primero
     //-------------------------------------------------------------------
     const custom = await findCustomReply(userMessage);
     if (custom) {
@@ -149,7 +76,7 @@ exports.sendChat = async (req, res) => {
     }
 
     //-------------------------------------------------------------------
-    // 2️⃣ CONTRUIR PROMPT
+    // 3️⃣ Construcción del prompt
     //-------------------------------------------------------------------
     const messages = [
       {
@@ -160,10 +87,12 @@ exports.sendChat = async (req, res) => {
       { role: "user", content: userMessage },
     ];
 
+    let reply = null;
+
     //-------------------------------------------------------------------
-    // 3️⃣ INTENTAR GEMINI (2 reintentos)
+    // 4️⃣ Intentar GEMINI (2 intentos)
     //-------------------------------------------------------------------
-    let reply = await callGemini(messages);
+    reply = await callGemini(messages);
     if (!reply) reply = await callGemini(messages);
 
     if (reply) {
@@ -172,7 +101,7 @@ exports.sendChat = async (req, res) => {
     }
 
     //-------------------------------------------------------------------
-    // 4️⃣ SI FALLA → INTENTAR OPENAI (2 reintentos)
+    // 5️⃣ Si Gemini falla → intentar OpenAI (2 intentos)
     //-------------------------------------------------------------------
     reply = await callOpenAI(messages);
     if (!reply) reply = await callOpenAI(messages);
@@ -183,7 +112,7 @@ exports.sendChat = async (req, res) => {
     }
 
     //-------------------------------------------------------------------
-    // 5️⃣ SI AMBOS FALLAN → FALLBACK
+    // 6️⃣ Si OpenAI también falla → fallback institucional
     //-------------------------------------------------------------------
     reply =
       "En este momento estamos experimentando alta demanda. Por favor intenta nuevamente en unos minutos.";
@@ -193,10 +122,4 @@ exports.sendChat = async (req, res) => {
     res.json({ reply, source: "fallback" });
 
   } catch (error) {
-    console.error("❌ Error grave en sendChat:", error);
-    res.status(500).json({
-      reply:
-        "Estamos experimentando un problema técnico. Por favor intenta más tarde.",
-    });
-  }
-};
+    co
