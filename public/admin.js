@@ -379,6 +379,72 @@ function loadCompare(start, end) {
               label: "Respuestas generadas",
               data: [data.gemini, data.openai, data.custom],
               backgroundColor: ["#4285F4", "#111827", "#28a745"],
+              const API_URL = "/admin";
+
+// Cargar la lista de IPs
+async function loadIPs() {
+  const res = await fetch(`${API_URL}/ips`);
+  const data = await res.json();
+
+  const tbody = document.querySelector("#ipTable tbody");
+  tbody.innerHTML = "";
+
+  data.forEach(ipInfo => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${ipInfo.ip}</td>
+      <td>${ipInfo.total}</td>
+      <td>${new Date(ipInfo.lastSeen).toLocaleString()}</td>
+      <td>
+        <button onclick="getLocation('${ipInfo.ip}')">
+          🌍 Ver ubicación
+        </button>
+      </td>
+      <td>
+        <button onclick="loadHistory('${ipInfo.ip}')">
+          📜 Historial
+        </button>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+// Obtener ubicación de una IP
+async function getLocation(ip) {
+  const res = await fetch(`${API_URL}/ipinfo/${ip}`);
+  const data = await res.json();
+
+  alert(`
+📍 Información de IP ${ip}
+
+País: ${data.country}
+Estado: ${data.regionName}
+Ciudad: ${data.city}
+ISP: ${data.isp}
+Lat: ${data.lat}
+Lon: ${data.lon}
+  `);
+}
+
+// Cargar historial por IP
+async function loadHistory(ip) {
+  const res = await fetch(`/messages/ip/${ip}`);
+  const messages = await res.json();
+
+  let html = `<h3>Historial de IP: ${ip}</h3><ul>`;
+  messages.forEach(msg => {
+    html += `<li><b>${msg.role}:</b> ${msg.text} <i>(${new Date(msg.createdAt).toLocaleString()})</i></li>`;
+  });
+  html += "</ul>";
+
+  document.getElementById("historyBox").innerHTML = html;
+}
+
+loadIPs();
+
             },
           ],
         },
