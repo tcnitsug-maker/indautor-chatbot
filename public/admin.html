@@ -3,35 +3,40 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Panel Administrativo - INDARELÍN</title>
+<title>Panel Administrativo INDARELÍN</title>
 <link rel="stylesheet" href="admin.css" />
 </head>
 
 <body>
-  <header>
-    <h1>Panel Administrativo INDARELÍN</h1>
-  </header>
 
-  <main>
-    <h2>📌 IPs Conectadas</h2>
-    <button onclick="loadIPs()">🔄 Recargar IPs</button>
+<header>
+  <h1>Panel Administrativo INDARELÍN</h1>
+</header>
 
-    <table id="ipTable">
-      <thead>
-        <tr>
-          <th>IP</th>
-          <th>Total mensajes</th>
-          <th>Última vez</th>
-          <th>Ubicación</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+<main>
 
-    <h2>📜 Historial por IP</h2>
-    <div id="historyBox"></div>
-  </main>
+  <h2>🌐 IPs Conectadas</h2>
+  <button onclick="loadIPs()">🔄 Recargar IPs</button>
+
+  <table id="ipTable">
+    <thead>
+      <tr>
+        <th>IP</th>
+        <th>Total mensajes</th>
+        <th>Última vez</th>
+        <th>Ubicación</th>
+        <th>Historial</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <hr>
+
+  <h2>📜 Historial por IP</h2>
+  <div id="historyBox"></div>
+
+</main>
 
 <script src="admin.js"></script>
 </body>
