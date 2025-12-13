@@ -415,3 +415,25 @@ async function deleteCustom(id) {
     alert("Error eliminando respuesta personalizada");
   }
 }
+// =============================
+// EXPORTS
+// =============================
+function exportCustomCSV() {
+  window.location.href = "/admin/custom-replies/export-csv";
+}
+
+function exportCustomPDF() {
+  window.location.href = "/admin/custom-replies/export-pdf";
+}
+
+function exportMessagesCSV() {
+  // Tomamos filtros actuales para exportar solo lo filtrado
+  const from = document.getElementById("filterFrom")?.value || "";
+  const to = document.getElementById("filterTo")?.value || "";
+  const ip = document.getElementById("filterIp")?.value || "";
+  const role = document.getElementById("filterRole")?.value || "";
+  const q = document.getElementById("filterQ")?.value || "";
+
+  const params = new URLSearchParams({ from, to, ip, role, q });
+  window.location.href = `/admin/messages/export-csv?${params.toString()}`;
+}
