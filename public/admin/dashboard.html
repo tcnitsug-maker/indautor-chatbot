@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>PANEL-INDARELIN</title>
+  <link rel="stylesheet" href="./admin.css"/>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-badge">🏛️</div>
+      <div>
+        <div style="font-size:14px; opacity:.95">PANEL-INDARELIN</div>
+        <div style="font-size:12px; opacity:.75">Panel administrativo</div>
+      </div>
+    </div>
+    <div class="userbox">
+      <span id="who" class="userchip">—</span>
+      <button class="btn gold small" id="btnGoLogin">Cambiar usuario</button>
+      <button class="btn danger small" id="btnLogout">Salir</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <button class="navbtn active" data-view="dash">📊 Dashboard <span class="tag">Resumen</span></button>
+      <button class="navbtn" data-view="messages">💬 Mensajes <span class="tag">Historial</span></button>
+      <button class="navbtn" data-view="replies">🧩 Respuestas <span class="tag">Custom</span></button>
+      <button class="navbtn" data-view="users">👤 Usuarios <span class="tag">Admin</span></button>
+      <button class="navbtn" data-view="ips">🔒 Seguridad (IPs) <span class="tag">Bloqueo</span></button>
+      <button class="navbtn" data-view="settings">⚙️ Configuración <span class="tag">IA</span></button>
+      <div class="footer-note">Tip: exporta a Excel para entregar resultados.</div>
+    </aside>
+
+    <main class="content">
+      <!-- Dashboard -->
+      <section id="view-dash">
+        <div class="row" style="justify-content:space-between;">
+          <h2 style="margin:0;">Dashboard</h2>
+          <div class="row">
+            <button class="btn gold" id="btnExportMetrics">📥 Exportar métricas (Excel)</button>
+            <button class="btn" id="btnRefreshDash">🔄 Recargar</button>
+          </div>
+        </div>
+        <div class="hr"></div>
+        <div class="grid" id="cards"></div>
+
+        <div class="hr"></div>
+        <div class="row" style="justify-content:space-between;">
+          <h3 style="margin:0;">Top IPs</h3>
+          <button class="btn" id="btnExportMsgs">📥 Exportar mensajes (Excel)</button>
+        </div>
+        <div style="margin-top:10px;" class="card">
+          <table class="table" id="topIpsTable"></table>
+        </div>
+
+        <div class="hr"></div>
+        <h3 style="margin:0;">Top textos</h3>
+        <div style="margin-top:10px;" class="card">
+          <table class="table" id="topTextsTable"></table>
+        </div>
+      </section>
+
+      <!-- Messages -->
+      <section id="view-messages" class="hidden">
+        <div class="row" style="justify-content:space-between;">
+          <h2 style="margin:0;">Mensajes</h2>
+          <div class="row">
+            <button class="btn gold" id="btnExportMsgs2">📥 Exportar mensajes (Excel)</button>
+            <button class="btn" id="btnRefreshMessages">🔄 Recargar</button>
+          </div>
+        </div>
+        <div class="hr"></div>
+        <div class="card">
+          <table class="table" id="messagesTable"></table>
+        </div>
+      </section>
+
+      <!-- Replies -->
+      <section id="view-replies" class="hidden">
+        <div class="row" style="justify-content:space-between;">
+          <h2 style="margin:0;">Respuestas personalizadas</h2>
+          <div class="row">
+            <button class="btn" id="btnTemplate">⬇️ Plantilla Excel</button>
+            <button class="btn gold" id="btnExportRepliesCSV">📥 Export CSV</button>
+            <button class="btn" id="btnExportRepliesPDF">📄 Export PDF</button>
+          </div>
+        </div>
+        <div class="hr"></div>
+
+        <div class="card">
+          <div class="row">
+            <input type="file" id="fileExcel" class="input" />
+            <button class="btn primary" id="btnImportExcel">📤 Importar Excel</button>
+            <button class="btn" id="btnRefreshReplies">🔄 Recargar</button>
+          </div>
+          <div id="importMsg" class="notice hidden" style="margin-top:12px;"></div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="card">
+          <table class="table" id="repliesTable"></table>
+        </div>
+      </section>
+
+      <!-- Users -->
+      <section id="view-users" class="hidden">
+        <div class="row" style="justify-content:space-between;">
+          <h2 style="margin:0;">Usuarios admin</h2>
+          <div class="row">
+            <button class="btn primary" id="btnAddUser">➕ Agregar usuario</button>
+            <button class="btn gold" id="btnExportUsers">📥 Exportar usuarios (Excel)</button>
+            <button class="btn" id="btnRefreshUsers">🔄 Recargar</button>
+          </div>
+        </div>
+        <div class="hr"></div>
+
+        <div class="card hidden" id="addUserCard">
+          <h3>Nuevo usuario</h3>
+          <div class="row">
+            <input id="newUser" class="input" placeholder="username"/>
+            <input id="newPass" class="input" placeholder="password (min 6)" type="password"/>
+            <select id="newRole" class="input">
+              <option value="support">support</option>
+              <option value="analyst">analyst</option>
+              <option value="editor">editor</option>
+              <option value="super">super</option>
+            </select>
+            <select id="newActive" class="input">
+              <option value="true">Activo</option>
+              <option value="false">Inactivo</option>
+            </select>
+            <button class="btn gold" id="btnCreateUser">Crear</button>
+          </div>
+          <div id="userMsg" class="notice hidden" style="margin-top:12px;"></div>
+        </div>
+
+        <div class="card">
+          <table class="table" id="usersTable"></table>
+        </div>
+      </section>
+
+      <!-- IPs -->
+      <section id="view-ips" class="hidden">
+        <div class="row" style="justify-content:space-between;">
+          <h2 style="margin:0;">Seguridad (IPs)</h2>
+          <div class="row">
+            <button class="btn gold" id="btnExportIPs">📥 Exportar IPs (Excel)</button>
+            <button class="btn" id="btnRefreshIPs">🔄 Recargar</button>
+          </div>
+        </div>
+        <div class="hr"></div>
+
+        <div class="card">
+          <div class="row">
+            <input id="ipToBlock" class="input" placeholder="IP a bloquear (ej. 1.2.3.4)"/>
+            <input id="ipReason" class="input" placeholder="Motivo (opcional)"/>
+            <button class="btn danger" id="btnBlockIP">🔒 Bloquear</button>
+          </div>
+          <div id="ipMsg" class="notice hidden" style="margin-top:12px;"></div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="card">
+          <table class="table" id="ipsTable"></table>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section id="view-settings" class="hidden">
+        <div class="row" style="justify-content:space-between;">
+          <h2 style="margin:0;">Configuración</h2>
+          <div class="row">
+            <button class="btn" id="btnRefreshSettings">🔄 Recargar</button>
+          </div>
+        </div>
+        <div class="hr"></div>
+
+        <div class="card">
+          <h3>Límite de preguntas IA (por IP / día)</h3>
+          <div class="row">
+            <input id="aiLimit" class="input" type="number" min="0" max="10000" placeholder="Ej. 20"/>
+            <button class="btn gold" id="btnSaveAiLimit">Guardar</button>
+          </div>
+          <div class="footer-note">Este límite debe aplicarse SOLO cuando se llama a IA (OpenAI/Gemini), no a respuestas personalizadas.</div>
+          <div id="settingsMsg" class="notice hidden" style="margin-top:12px;"></div>
+        </div>
+      </section>
+
+      <div id="globalMsg" class="notice hidden" style="margin-top:14px;"></div>
+    </main>
+  </div>
+
+  <script src="./admin.js"></script>
+  <script>
+    AdminUI.mountDashboard();
+  </script>
+</body>
+</html>
