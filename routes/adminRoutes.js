@@ -788,7 +788,7 @@ router.post("/unblock-ip", requireRole("super"), async (req, res) => {
 });
   blockedIPs.add(ip);
   res.json({ ok: true, blocked: ip });
-});
+
 
 // =======================================================================
 // VIDEOS (biblioteca)
