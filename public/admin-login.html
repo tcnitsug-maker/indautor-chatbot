@@ -3,69 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <title>Login Administrador</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .box {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      width: 320px;
-      box-shadow: 0 4px 20px rgba(0,0,0,.2);
-    }
-    h2 { text-align: center; }
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-    }
-    button {
-      width: 100%;
-      margin-top: 15px;
-      padding: 10px;
-      background: #004aad;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
-<body>
+<body style="font-family: Arial; padding: 40px;">
+  <h2>🔐 Acceso Administrativo</h2>
 
-<div class="box">
-  <h2>Acceso Administrador</h2>
-  <input id="user" placeholder="Usuario" />
-  <input id="pass" type="password" placeholder="Contraseña" />
+  <input id="username" placeholder="Usuario" /><br /><br />
+  <input id="password" type="password" placeholder="Contraseña" /><br /><br />
   <button onclick="login()">Entrar</button>
-</div>
 
-<script>
-async function login() {
-  const res = await fetch("/admin-auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      username: user.value,
-      password: pass.value
-    })
-  });
+  <p id="error" style="color:red;"></p>
 
-  const data = await res.json();
+  <script>
+    async function login() {
+      document.getElementById("error").textContent = "";
 
-  if (data.token) {
-    localStorage.token = data.token;
-    location.href = "/admin.html";
-  } else {
-    alert("Credenciales inválidas");
-  }
-}
-</script>
+      const r = await fetch("/admin-auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: username.value,
+          password: password.value,
+        }),
+      });
 
+      const d = await r.json();
+
+      if (d.token) {
+        localStorage.setItem("token", d.token);
+        window.location.href = "/admin.html";
+      } else {
+        document.getElementById("error").textContent =
+          d.error || "Error de acceso";
+      }
+    }
+  </script>
 </body>
 </html>
