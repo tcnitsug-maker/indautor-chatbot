@@ -1,44 +1,56 @@
-const express = require("express");
-const router = express.Router();
+import express from "express";
+import Message from "../models/Message.js";
+import CustomReply from "../models/CustomReply.js";
+import fetch from "node-fetch";
+import PDFDocument from "pdfkit";
 
-const adminController = require("../controllers/adminController");
-const Message = require("../models/Message");
-const CustomReply = require("../models/CustomReply");
-const fetch = require("node-fetch");
-const PDFDocument = require("pdfkit");
+const router = express.Router();
 
 // =======================================================================
 // 🔐 CAMBIO DE CONTRASEÑA
 // POST /admin/change-password
 // =======================================================================
-router.post("/change-password", adminController.changePassword);
+import bcrypt from "bcryptjs";
+import AdminUser from "../models/AdminUser.js";
+
+router.post("/change-password", async (req, res) => {
+  try {
+    const adminId = req.admin.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Faltan datos" });
+    }
+
+    const user = await AdminUser.findById(adminId);
+    if (!user) {
+      return res.status(404).json({ error: "Admin no encontrado" });
+    }
+
+    const ok = await bcrypt.compare(currentPassword, user.password);
+    if (!ok) {
+      return res.status(401).json({ error: "Contraseña actual incorrecta" });
+    }
+
+    user.password = newPassword; // se hashea en pre-save
+    await user.save();
+
+    res.json({ ok: true, message: "Contraseña actualizada" });
+  } catch (err) {
+    console.error("change-password:", err);
+    res.status(500).json({ error: "Error cambiando contraseña" });
+  }
+});
 
 // =======================================================================
-// 1. GET /admin/messages  → Historial general con filtros
+// 1. HISTORIAL GENERAL
+// GET /admin/messages
 // =======================================================================
 router.get("/messages", async (req, res) => {
   try {
-    const { from, to, ip, role, q } = req.query;
-    const filter = {};
-
-    if (from || to) {
-      filter.createdAt = {};
-      if (from) filter.createdAt.$gte = new Date(from);
-      if (to) {
-        const d = new Date(to);
-        d.setHours(23, 59, 59, 999);
-        filter.createdAt.$lte = d;
-      }
-    }
-
-    if (ip) filter.ip = ip;
-    if (role) filter.role = role;
-    if (q) filter.text = { $regex: q, $options: "i" };
-
-    const msgs = await Message.find(filter).sort({ createdAt: -1 }).lean();
+    const msgs = await Message.find().sort({ createdAt: -1 }).lean();
     res.json(msgs);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "No se pudieron obtener los mensajes" });
   }
 });
@@ -51,7 +63,10 @@ router.get("/messages/export-csv", async (req, res) => {
     const msgs = await Message.find().sort({ createdAt: -1 }).lean();
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", "attachment; filename=historial_chat.csv");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="historial_chat.csv"'
+    );
 
     res.write("fecha,ip,rol,texto\n");
     for (const m of msgs) {
@@ -75,12 +90,14 @@ router.get("/custom-replies", async (req, res) => {
 
 router.post("/custom-replies", async (req, res) => {
   const { question, answer, keywords } = req.body;
+
   const reply = await CustomReply.create({
     question,
     answer,
     keywords: keywords || [],
     enabled: true,
   });
+
   res.json(reply);
 });
 
@@ -96,12 +113,17 @@ router.get("/custom-replies/export-pdf", async (req, res) => {
   const replies = await CustomReply.find().lean();
 
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", "attachment; filename=respuestas.pdf");
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="respuestas_personalizadas.pdf"'
+  );
 
   const doc = new PDFDocument({ margin: 30 });
   doc.pipe(res);
 
-  doc.fontSize(18).text("Respuestas Personalizadas", { align: "center" });
+  doc.fontSize(18).text("Respuestas Personalizadas INDARELÍN", {
+    align: "center",
+  });
   doc.moveDown();
 
   replies.forEach((r, i) => {
@@ -120,7 +142,7 @@ router.get("/ips", async (req, res) => {
   const msgs = await Message.find({}, { ip: 1 }).lean();
   const stats = {};
 
-  msgs.forEach(m => {
+  msgs.forEach((m) => {
     if (!m.ip) return;
     stats[m.ip] = (stats[m.ip] || 0) + 1;
   });
@@ -135,22 +157,6 @@ router.get("/ips", async (req, res) => {
 });
 
 // =======================================================================
-// 6. BLOQUEO DE IP (MEMORIA)
-// =======================================================================
-const blockedIPs = new Set();
-
-router.get("/blocked-ips", (req, res) => {
-  res.json([...blockedIPs]);
-});
-
-router.post("/block-ip", (req, res) => {
-  const { ip } = req.body;
-  if (!ip) return res.status(400).json({ error: "Falta IP" });
-  blockedIPs.add(ip);
-  res.json({ ok: true });
-});
-
-// =======================================================================
-// ✅ EXPORT FINAL (SOLO UNA VEZ, AL FINAL)
+// ✅ EXPORT FINAL (OBLIGATORIO)
 // =======================================================================
 export default router;
