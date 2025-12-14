@@ -27,7 +27,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🔴 CAMBIO CRÍTICO AQUÍ
+// Archivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
 
 // =====================
@@ -39,7 +39,7 @@ mongoose
   .catch((e) => console.error("❌ MongoDB error:", e));
 
 // =====================
-// RUTAS PÚBLICAS HTML (EXPLÍCITAS)
+// HTML PÚBLICO
 // =====================
 app.get("/admin-login.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin-login.html"));
@@ -50,18 +50,14 @@ app.get("/admin.html", (req, res) => {
 });
 
 // =====================
-// AUTH ADMIN
+// AUTH ADMIN (LOGIN)
 // =====================
 app.use("/admin-auth", require("./routes/adminAuthRoutes"));
-app.use("/setup", require("./routes/setupRoutes"));
 
 // =====================
 // RUTAS PROTEGIDAS ADMIN
 // =====================
 const authAdmin = require("./middleware/authAdmin");
-
-app.use("/admin-auth", require("./routes/adminAuthRoutes"));
-app.use("/admin", authAdmin("viewer"), require("./routes/adminRoutes"));
 app.use("/admin", authAdmin("viewer"), require("./routes/adminRoutes"));
 
 // =====================
