@@ -1,8 +1,8 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 
-// ⚠️ RUTA CORRECTA (nota el ../utneza-chatbot/)
-const AdminUser = require("../utneza-chatbot/models/AdminUser");
+// ✅ RUTA REAL (DOBLE utneza-chatbot)
+const AdminUser = require("../utneza-chatbot/models/AdminUser.js");
 
 async function createAdmin() {
   await mongoose.connect(process.env.MONGO_URI);
