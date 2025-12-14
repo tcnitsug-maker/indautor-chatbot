@@ -1,13 +1,14 @@
-// =====================
-// CONFIG
-// =====================
-const API_BASE = ""; // mismo dominio
-const LOGIN_URL = "/admin-auth/login";
-const ADMIN_API = "/admin";
+console.log("✅ admin.js cargado");
 
-// =====================
-// LOGIN
-// =====================
+const LOGIN_URL = "/admin-auth/login";
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("loginBtn");
+  if (btn) {
+    btn.addEventListener("click", loginAdmin);
+  }
+});
+
 async function loginAdmin() {
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
@@ -36,47 +37,14 @@ async function loginAdmin() {
       return;
     }
 
-    // Guardar sesión
     localStorage.setItem("adminToken", data.token);
     localStorage.setItem("adminUser", data.username);
     localStorage.setItem("adminRole", data.role);
 
-    // Ir al dashboard
     window.location.href = "dashboard.html";
   } catch (err) {
     console.error(err);
     errorBox.textContent = "Error de conexión";
     errorBox.style.display = "block";
-  }
-}
-
-// =====================
-// AUTH HEADER
-// =====================
-function authHeaders() {
-  const token = localStorage.getItem("adminToken");
-  return {
-    "Content-Type": "application/json",
-    Authorization: "Bearer " + token,
-  };
-}
-
-// =====================
-// LOGOUT
-// =====================
-function logoutAdmin() {
-  localStorage.removeItem("adminToken");
-  localStorage.removeItem("adminUser");
-  localStorage.removeItem("adminRole");
-  window.location.href = "index.html";
-}
-
-// =====================
-// GUARD
-// =====================
-function requireLogin() {
-  const token = localStorage.getItem("adminToken");
-  if (!token) {
-    window.location.href = "index.html";
   }
 }
