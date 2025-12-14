@@ -3,16 +3,17 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const AdminUser = require("../models/AdminUser");
 
-// ======================================================
+// ================================
 // POST /admin-auth/login
-// Login de administrador (superadmin | admin | viewer)
-// ======================================================
+// ================================
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ error: "Faltan credenciales" });
+      return res.status(400).json({
+        error: "Usuario y contraseña requeridos",
+      });
     }
 
     const user = await AdminUser.findOne({
@@ -21,12 +22,22 @@ router.post("/login", async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({ error: "Credenciales inválidas" });
+      return res.status(401).json({
+        error: "Credenciales inválidas",
+      });
     }
 
-    const ok = await user.comparePassword(password);
-    if (!ok) {
-      return res.status(401).json({ error: "Credenciales inválidas" });
+    const valid = await user.comparePassword(password);
+    if (!valid) {
+      return res.status(401).json({
+        error: "Credenciales inválidas",
+      });
+    }
+
+    if (!process.env.ADMIN_JWT_SECRET) {
+      return res.status(500).json({
+        error: "ADMIN_JWT_SECRET no configurado",
+      });
     }
 
     const token = jwt.sign(
@@ -42,12 +53,17 @@ router.post("/login", async (req, res) => {
     res.json({
       ok: true,
       token,
-      role: user.role,
-      username: user.username,
+      user: {
+        id: user._id,
+        username: user.username,
+        role: user.role,
+      },
     });
   } catch (err) {
     console.error("Error en login admin:", err);
-    res.status(500).json({ error: "Error interno de autenticación" });
+    res.status(500).json({
+      error: "Error interno al iniciar sesión",
+    });
   }
 });
 
