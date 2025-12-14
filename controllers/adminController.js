@@ -1,6 +1,7 @@
 const AdminUser = require("../models/AdminUser");
 const bcrypt = require("bcryptjs");
 
+// 🔐 Cambiar contraseña
 exports.changePassword = async (req, res) => {
   try {
     const adminId = req.admin.id;
@@ -24,7 +25,7 @@ exports.changePassword = async (req, res) => {
       return res.status(401).json({ error: "Contraseña actual incorrecta" });
     }
 
-    user.password = newPassword; // se hashea solo (pre-save)
+    user.password = newPassword; // se hashea con pre-save
     await user.save();
 
     res.json({ ok: true, message: "Contraseña actualizada correctamente" });
