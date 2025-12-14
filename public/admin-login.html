@@ -74,44 +74,40 @@
   </div>
 
   <script>
-    async function login() {
-      const username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const errorBox = document.getElementById("error");
+async function login() {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const errorBox = document.getElementById("error");
 
-      errorBox.innerText = "";
+  errorBox.innerText = "";
 
-      if (!username || !password) {
-        errorBox.innerText = "Debes ingresar usuario y contraseña";
-        return;
-      }
+  if (!username || !password) {
+    errorBox.innerText = "Debes ingresar usuario y contraseña";
+    return;
+  }
 
-      try {
-        const res = await fetch("/admin-auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password })
-        });
+  const res = await fetch("/admin-auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password })
+  });
 
-        const data = await res.json();
+  const data = await res.json();
 
-        if (!res.ok || !data.token) {
-          errorBox.innerText = data.error || "Credenciales incorrectas";
-          return;
-        }
+  if (!res.ok || !data.token) {
+    errorBox.innerText = data.error || "Credenciales incorrectas";
+    return;
+  }
 
-        // ✅ Guardar sesión
-        localStorage.setItem("admin_token", data.token);
-        localStorage.setItem("admin_user", data.username);
-        localStorage.setItem("admin_role", data.role);
+  // ✅ CLAVE CORRECTA
+  localStorage.setItem("admin_token", data.token);
+  localStorage.setItem("admin_user", data.username);
+  localStorage.setItem("admin_role", data.role);
 
-        // 👉 Ir al panel
-        window.location.replace("/admin.html");
+  window.location.replace("/admin.html");
+}
+</script>
 
-      } catch (err) {
-        errorBox.innerText = "Error de conexión con el servidor";
-      }
-    }
   </script>
 
 </body>
