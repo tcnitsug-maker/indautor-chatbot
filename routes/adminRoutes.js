@@ -786,9 +786,6 @@ router.post("/unblock-ip", requireRole("super"), async (req, res) => {
     res.status(500).json({ error: "Error desbloqueando IP" });
   }
 });
-  blockedIPs.add(ip);
-  res.json({ ok: true, blocked: ip });
-
 
 // =======================================================================
 // VIDEOS (biblioteca)
