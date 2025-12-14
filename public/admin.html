@@ -12,6 +12,14 @@
 
 <!-- CHART JS -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const token = localStorage.getItem("admin_token");
+
+// ❌ Si no hay token → regresar a login
+if (!token) {
+  window.location.href = "/admin-login.html";
+}
+</script>
 
 </head>
 <body>
