@@ -1,3 +1,16 @@
+const token = localStorage.token;
+if (!token) location.href = "/admin-login.html";
+
+function fetchJson(url, options = {}) {
+  options.headers = {
+    ...(options.headers || {}),
+    Authorization: "Bearer " + token,
+  };
+  return fetch(url, options).then((r) => {
+    if (!r.ok) throw new Error("Error");
+    return r.json();
+  });
+}
 // =============================
 // CONFIGURACIÓN BÁSICA
 // =============================
