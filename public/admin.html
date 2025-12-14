@@ -18,7 +18,7 @@ const token = localStorage.getItem("admin_token");
 
 // ❌ Si no hay token → regresar a login
 if (!token) {
-  window.location.href = "/admin-login.html";
+  window.location.replace("/admin-login.html");
 }
 </script>
   const API_BASE = "";
