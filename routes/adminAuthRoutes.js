@@ -1,39 +1,49 @@
-const express = require("express");
-const router = express.Router();
-const jwt = require("jsonwebtoken");
-const AdminUser = require("../models/AdminUser");
+import express from "express";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import AdminUser from "../models/AdminUser.js";
 
+const router = express.Router();
+
+// =====================
+// LOGIN ADMIN
+// POST /admin-auth/login
+// =====================
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    const user = await AdminUser.findOne({ username, active: true });
-    if (!user) {
-      return res.status(401).json({ error: "Credenciales inválidas" });
+    if (!username || !password) {
+      return res.status(400).json({ error: "Faltan datos" });
     }
 
-    const ok = await user.comparePassword(password);
+    const admin = await AdminUser.findOne({ username });
+    if (!admin) {
+      return res.status(401).json({ error: "Usuario no existe" });
+    }
+
+    if (!admin.active) {
+      return res.status(403).json({ error: "Usuario desactivado" });
+    }
+
+    const ok = await bcrypt.compare(password, admin.password);
     if (!ok) {
-      return res.status(401).json({ error: "Credenciales inválidas" });
+      return res.status(401).json({ error: "Contraseña incorrecta" });
     }
 
     const token = jwt.sign(
       {
-        id: user._id,
-        username: user.username,
-        role: user.role,
+        id: admin._id,
+        username: admin.username,
+        role: admin.role,
       },
       process.env.ADMIN_JWT_SECRET,
       { expiresIn: "8h" }
     );
 
-    res.json({
-      token,
-      username: user.username,
-      role: user.role,
-    });
+    res.json({ ok: true, token });
   } catch (err) {
-    console.error(err);
+    console.error("Login admin error:", err);
     res.status(500).json({ error: "Error en login" });
   }
 });
