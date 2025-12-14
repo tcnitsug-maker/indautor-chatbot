@@ -1,4 +1,4 @@
-c// middleware/authAdmin.js
+// middleware/authAdmin.js
 const jwt = require("jsonwebtoken");
 
 module.exports = function authAdmin(requiredRole = null) {
