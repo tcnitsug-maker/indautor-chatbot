@@ -237,9 +237,6 @@ router.get("/custom-replies/export-csv", requireRole("analyst"), async (req, res
   }
 });
 
-  }
-});
-
 // =======================================================================
 // 7. GET /admin/custom-replies/export-pdf → Exportar custom replies a PDF
 // =======================================================================
