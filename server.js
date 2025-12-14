@@ -68,8 +68,7 @@ const authAdmin = require("./middleware/authAdmin");
 // ⚠️ adminRoutes DEBE exportar router con module.exports
 const adminRoutes = require("./routes/adminRoutes");
 
-// Nivel mínimo para entrar a /admin: support (lectura limitada)
-app.use("/admin", authAdmin("support"), adminRoutes);
+app.use("/admin", authAdmin("viewer"), adminRoutes);
 
 // =====================
 // CHAT
@@ -94,14 +93,10 @@ io.use((socket, next) => {
     if (!token) return next(new Error("NO_TOKEN"));
 
     const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
-    // Compatibilidad con roles legacy
-    const { normalizeRole } = require("./middleware/authAdmin");
-    const role = normalizeRole(decoded.role);
-    if (!["support", "analyst", "editor", "super"].includes(role)) {
-      return next(new Error("BAD_ROLE"));
-    }
+    const roles = ["viewer", "admin", "superadmin"];
+    if (!roles.includes(decoded.role)) return next(new Error("BAD_ROLE"));
 
-    socket.admin = { ...decoded, role };
+    socket.admin = decoded;
     next();
   } catch (err) {
     next(new Error("BAD_TOKEN"));

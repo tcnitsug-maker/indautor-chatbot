@@ -60,16 +60,33 @@ function normalize(text) {
 
 async function findCustomReply(userText) {
   const normUser = normalize(userText);
-  const replies = await CustomReply.find({ enabled: true });
+  const replies = await CustomReply.find({ enabled: true }).sort({ priority: -1, createdAt: -1 });
 
   for (const r of replies) {
-    const nq = normalize(r.question);
-    if (normUser.includes(nq) || nq.includes(normUser)) return r.answer;
+    const trig = r.trigger || r.question || "";
+    const nq = normalize(trig);
+    if (nq && (normUser.includes(nq) || nq.includes(normUser))) {
+      return {
+        type: r.type || "text",
+        reply: r.response || r.answer || "",
+        video_url: r.video_url || "",
+        video_file: r.video_file || "",
+        video_name: r.video_name || ""
+      };
+    }
 
     if (Array.isArray(r.keywords)) {
       for (const kw of r.keywords) {
         const nk = normalize(kw);
-        if (nk && normUser.includes(nk)) return r.answer;
+        if (nk && normUser.includes(nk)) {
+          return {
+            type: r.type || "text",
+            reply: r.response || r.answer || "",
+            video_url: r.video_url || "",
+            video_file: r.video_file || "",
+            video_name: r.video_name || ""
+          };
+        }
       }
     }
   }
@@ -176,7 +193,7 @@ exports.sendChat = async (req, res) => {
     if (custom) {
       const botDoc = await Message.create({ role: "bot", text: custom, ip, source: "custom" });
       io?.emit("new_message", botDoc);
-      return res.json({ reply: custom, source: "custom" });
+      return res.json({ reply: custom.reply, source: "custom", type: custom.type || "text", video_url: custom.video_url || custom.video_file || "" });
     }
 
     const messages = [

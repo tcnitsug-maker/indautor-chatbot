@@ -25,8 +25,8 @@
   <button data-tab="ips">🌍 IPs & Geolocalización</button>
   <button data-tab="ipHistory">📜 Historial por IP</button>
   <button data-tab="messages">💬 Historial General</button>
-  <button data-tab="custom">🧠 Respuestas Personalizadas</button>
-  <button data-tab="users" id="usersTabBtn" style="display:none;">👥 Usuarios</button>
+  <button data-tab="custom">🧠 Respuestas</button>
+  <button data-tab="videos">🎥 Videos</button>
 </div>
 
 <main>
@@ -97,56 +97,139 @@
   </section>
 
   <!-- CUSTOM REPLIES (OLD PANEL) -->
-  <section id="custom" class="tab-content">
-    <h2>🧠 Respuestas Personalizadas</h2>
+  
+<section id="custom" class="tab-content">
+  <h2>🧠 Respuestas Personalizadas</h2>
 
-    <div class="card">
-      <input id="qInput" placeholder="Pregunta" />
-      <textarea id="aInput" placeholder="Respuesta"></textarea>
-      <input id="kInput" placeholder="Palabras clave (coma separadas)" />
-      <button onclick="addCustom()">Agregar</button>
-    </div>
-
-    <table>
-      <thead>
-        <tr><th>Pregunta</th><th>Respuesta</th><th>Keywords</th><th>Eliminar</th></tr>
-      </thead>
-      <tbody id="customTable"></tbody>
-    </table>
-  </section>
-
-  <!-- USERS (solo SUPER) -->
-  <section id="users" class="tab-content">
-    <h2>👥 Usuarios Administradores</h2>
-
-    <div class="card">
-      <h3>Crear usuario</h3>
-      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <input id="newUser" placeholder="Usuario" style="min-width:200px;" />
-        <input id="newPass" type="password" placeholder="Contraseña" style="min-width:200px;" />
-        <select id="newRole" style="min-width:180px;">
-          <option value="support">Support</option>
-          <option value="analyst">Analyst</option>
-          <option value="editor">Editor</option>
-          <option value="super">Super</option>
-        </select>
-        <button onclick="createAdminUser()">Crear</button>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Lista</h3>
+        <input id="customSearch" class="input" placeholder="Buscar trigger o keyword..." />
       </div>
-      <p style="opacity:.75;margin-top:8px;">* Solo <b>Super</b> puede ver y administrar usuarios.</p>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Trigger</th>
+            <th>Tipo</th>
+            <th>Prioridad</th>
+            <th>Activo</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="customTable"></tbody>
+      </table>
+
+      <div class="hint">
+        * Las respuestas se evalúan por <b>prioridad</b> (mayor primero).
+      </div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Usuario</th>
-          <th>Rol</th>
-          <th>Activo</th>
-          <th>Creado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="usersTable"></tbody>
-    </table>
+    <div class="panel">
+      <div class="panel-header">
+        <h3 id="customFormTitle">Crear / Editar</h3>
+        <div class="row">
+          <button id="btnNewCustom" class="btn" onclick="newCustom()">➕ Nuevo</button>
+        </div>
+      </div>
+
+      <div class="form">
+        <input type="hidden" id="customId" />
+        <label>Trigger (pregunta clave)</label>
+        <input id="triggerInput" class="input" placeholder="Ej: horario, requisitos, etc." />
+
+        <label>Respuesta (texto)</label>
+        <textarea id="responseInput" class="textarea" placeholder="Escribe la respuesta..."></textarea>
+
+        <div class="row">
+          <div>
+            <label>Palabras clave (separadas por coma)</label>
+            <input id="keywordsInput" class="input" placeholder="ej: costo, precio, pago" />
+          </div>
+          <div>
+            <label>Prioridad</label>
+            <input id="priorityInput" class="input" type="number" min="1" max="100" value="10" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Tipo</label>
+            <select id="typeInput" class="input" onchange="onTypeChange()">
+              <option value="text">Texto</option>
+              <option value="video">Video</option>
+            </select>
+          </div>
+          <div class="switch">
+            <label><input type="checkbox" id="enabledInput" checked /> Activo</label>
+          </div>
+        </div>
+
+        <div id="videoBox" class="video-box hidden">
+          <div class="row">
+            <div>
+              <label>Video (subido)</label>
+              <select id="videoSelect" class="input"></select>
+              <small>Tip: sube videos en la pestaña 🎥 Videos.</small>
+            </div>
+            <div>
+              <label>O URL externa (YouTube embed)</label>
+              <input id="videoUrlInput" class="input" placeholder="https://www.youtube.com/embed/XXXX" />
+            </div>
+          </div>
+
+          <div class="preview">
+            <div id="videoPreview"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="btn primary" onclick="saveCustom()">💾 Guardar</button>
+          <button class="btn danger" id="btnDeleteCustom" onclick="deleteCustom()" style="display:none;">🗑️ Eliminar</button>
+        </div>
+
+        <div class="hint" id="permHint"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+  <section id="videos" class="tab-content">
+    <h2>🎥 Biblioteca de Videos</h2>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Subir video (MP4/WebM, máx 50MB)</h3>
+        </div>
+
+        <div class="form">
+          <input type="file" id="videoFile" accept="video/mp4,video/webm,video/ogg" class="input" />
+          <button class="btn primary" onclick="uploadVideo()">⬆️ Subir</button>
+          <div class="hint">Los roles <b>editor</b> y <b>super</b> pueden subir. Solo <b>super</b> puede eliminar.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Videos subidos</h3>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>Nombre</th><th>Fecha</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="videosTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Vista previa</h3></div>
+      <div id="videoLibraryPreview" class="preview"></div>
+    </div>
   </section>
 
 </main>

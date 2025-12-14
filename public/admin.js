@@ -4,41 +4,23 @@
 const token = localStorage.token;
 if (!token) location.href = "/admin-login.html";
 
-// =============================
-// ROLES (support < analyst < editor < super)
-// =============================
-const ROLE_ORDER = ["support", "analyst", "editor", "super"];
 
-function decodeJwt(jwt) {
+function parseJwt(token) {
   try {
-    const payload = jwt.split(".")[1];
-    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(decodeURIComponent(escape(json)));
-  } catch (_) {
-    return {};
-  }
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
+    return JSON.parse(jsonPayload);
+  } catch { return null; }
 }
 
-function normalizeRole(role) {
-  const r = String(role || "").toLowerCase();
-  if (r === "viewer") return "analyst";
-  if (r === "admin") return "editor";
-  if (r === "superadmin") return "super";
-  if (ROLE_ORDER.includes(r)) return r;
-  return "support";
-}
+const adminInfo = parseJwt(token) || {};
+const ADMIN_ROLE = (adminInfo.role || "support").toLowerCase();
 
-const currentAdmin = (() => {
-  const p = decodeJwt(token);
-  return {
-    id: p.id,
-    username: p.username,
-    role: normalizeRole(p.role),
-  };
-})();
-
-function can(minRole) {
-  return ROLE_ORDER.indexOf(currentAdmin.role) >= ROLE_ORDER.indexOf(minRole);
+// helpers permisos
+const ROLE_ORDER = ["support","analyst","editor","super"];
+function roleAtLeast(required) {
+  return ROLE_ORDER.indexOf(ADMIN_ROLE) >= ROLE_ORDER.indexOf(required);
 }
 
 // =============================
@@ -122,16 +104,6 @@ function toast(msg, type = "info") {
 // TABS
 // =============================
 function setActiveTab(tabId) {
-  // Hard guard (por si alguien fuerza el tab)
-  if (tabId === "custom" && !can("editor")) {
-    toast("No tienes permisos para editar respuestas personalizadas.", "error");
-    tabId = "dashboard";
-  }
-  if (tabId === "users" && !can("super")) {
-    toast("No tienes permisos para administrar usuarios.", "error");
-    tabId = "dashboard";
-  }
-
   document.querySelectorAll(".tab-content").forEach((sec) => {
     sec.classList.toggle("active", sec.id === tabId);
   });
@@ -143,21 +115,10 @@ function setActiveTab(tabId) {
   if (tabId === "ips") loadIPs();
   if (tabId === "messages") loadGeneralHistory();
   if (tabId === "custom") loadCustomReplies();
-  if (tabId === "users") loadAdminUsers();
+  if (tabId === "videos") loadVideos();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  // UI según rol
-  try {
-    const btnUsers = document.getElementById("usersTabBtn");
-    if (btnUsers) btnUsers.style.display = can("super") ? "" : "none";
-
-    const btnCustom = document.querySelector('#navbar button[data-tab="custom"]');
-    if (btnCustom) btnCustom.style.display = can("editor") ? "" : "none";
-  } catch (e) {
-    console.warn("No se pudo aplicar UI por rol", e);
-  }
-
   document.querySelectorAll("#navbar button").forEach((btn) => {
     btn.addEventListener("click", () => setActiveTab(btn.getAttribute("data-tab")));
   });
@@ -435,95 +396,6 @@ async function loadCustomReplies() {
   }
 }
 
-// =============================
-// USERS (solo SUPER)
-// =============================
-async function loadAdminUsers() {
-  if (!can("super")) return;
-  const tbody = document.getElementById("usersTable");
-  if (!tbody) return;
-  tbody.innerHTML = "<tr><td colspan='5'>Cargando...</td></tr>";
-  try {
-    const users = await fetchJson(`${ADMIN_API}/users`);
-    if (!users.length) {
-      tbody.innerHTML = "<tr><td colspan='5'>Sin usuarios</td></tr>";
-      return;
-    }
-    tbody.innerHTML = "";
-    for (const u of users) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${escapeHtml(u.username)}</td>
-        <td>
-          <select data-user-id="${u._id}" class="roleSelect">
-            <option value="support">support</option>
-            <option value="analyst">analyst</option>
-            <option value="editor">editor</option>
-            <option value="super">super</option>
-          </select>
-        </td>
-        <td>
-          <input type="checkbox" data-user-id="${u._id}" class="activeToggle" />
-        </td>
-        <td>${formatDate(u.createdAt)}</td>
-        <td>
-          <button data-user-id="${u._id}" class="saveUserBtn">Guardar</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-
-      // set values
-      const sel = tr.querySelector(".roleSelect");
-      if (sel) sel.value = normalizeRole(u.role);
-      const chk = tr.querySelector(".activeToggle");
-      if (chk) chk.checked = !!u.active;
-    }
-
-    // bind events
-    tbody.querySelectorAll(".saveUserBtn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = btn.getAttribute("data-user-id");
-        const row = btn.closest("tr");
-        const role = row.querySelector(".roleSelect")?.value;
-        const active = row.querySelector(".activeToggle")?.checked;
-        try {
-          await fetchJson(`${ADMIN_API}/users/${id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ role, active }),
-          });
-          toast("Usuario actualizado", "success");
-        } catch (e) {
-          toast(e.message || "Error actualizando usuario", "error");
-        }
-      });
-    });
-  } catch (err) {
-    console.error(err);
-    tbody.innerHTML = "<tr><td colspan='5'>Error cargando usuarios</td></tr>";
-    toast("No se pudieron cargar usuarios", "error");
-  }
-}
-
-async function createAdminUser() {
-  if (!can("super")) return toast("Solo SUPER puede crear usuarios", "error");
-  const user = document.getElementById("newUser")?.value?.trim();
-  const pass = document.getElementById("newPass")?.value;
-  const role = document.getElementById("newRole")?.value || "support";
-  if (!user || !pass) return toast("Faltan usuario/contraseña", "error");
-  try {
-    await fetchJson(`${ADMIN_API}/users`, {
-      method: "POST",
-      body: JSON.stringify({ username: user, password: pass, role }),
-    });
-    document.getElementById("newUser").value = "";
-    document.getElementById("newPass").value = "";
-    toast("Usuario creado", "success");
-    loadAdminUsers();
-  } catch (err) {
-    toast(err.message || "No se pudo crear usuario", "error");
-  }
-}
-
 async function addCustom() {
   const question = document.getElementById("qInput").value.trim();
   const answer = document.getElementById("aInput").value.trim();
@@ -633,3 +505,341 @@ async function deleteCustom(id) {
     toast(`SPAM/FLOOD detectado de IP ${data.ip} (bloqueo temporal)`, "error");
   });
 })();
+
+
+// =============================
+// CUSTOM REPLIES PRO
+// =============================
+let customCache = [];
+let videosCache = [];
+
+function onTypeChange() {
+  const type = document.getElementById("typeInput")?.value;
+  const box = document.getElementById("videoBox");
+  if (!box) return;
+  box.classList.toggle("hidden", type !== "video");
+  renderVideoPreview();
+}
+
+function renderVideoPreview() {
+  const prev = document.getElementById("videoPreview");
+  if (!prev) return;
+  const sel = document.getElementById("videoSelect");
+  const urlInput = document.getElementById("videoUrlInput");
+  const chosenId = sel?.value || "";
+  const external = (urlInput?.value || "").trim();
+  const chosen = videosCache.find(v => v._id === chosenId);
+  const src = external || chosen?.url || "";
+
+  if (!src) { prev.innerHTML = "<div class='hint'>Sin vista previa</div>"; return; }
+
+  if (src.includes("youtube.com") || src.includes("youtu.be") || src.includes("/embed/")) {
+    prev.innerHTML = `<iframe width="100%" height="240" src="${src}" frameborder="0" allowfullscreen></iframe>`;
+  } else {
+    prev.innerHTML = `<video src="${src}" controls style="width:100%;max-height:260px;border-radius:10px"></video>`;
+  }
+}
+
+function fillVideoSelect(selectedId = "") {
+  const sel = document.getElementById("videoSelect");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">(ninguno)</option>` + videosCache.map(v => 
+    `<option value="${v._id}" ${v._id===selectedId?'selected':''}>${v.originalName}</option>`
+  ).join("");
+  sel.onchange = renderVideoPreview;
+}
+
+function newCustom() {
+  document.getElementById("customId").value = "";
+  document.getElementById("triggerInput").value = "";
+  document.getElementById("responseInput").value = "";
+  document.getElementById("keywordsInput").value = "";
+  document.getElementById("priorityInput").value = 10;
+  document.getElementById("typeInput").value = "text";
+  document.getElementById("enabledInput").checked = true;
+  document.getElementById("videoUrlInput").value = "";
+  fillVideoSelect("");
+  onTypeChange();
+  document.getElementById("btnDeleteCustom").style.display = "none";
+}
+
+function applyPermsToCustomForm() {
+  const hint = document.getElementById("permHint");
+  const canEdit = roleAtLeast("editor");
+  const canDelete = roleAtLeast("super");
+
+  // disable inputs if no edit
+  ["triggerInput","responseInput","keywordsInput","priorityInput","typeInput","enabledInput","videoSelect","videoUrlInput"]
+    .forEach(id => { const el=document.getElementById(id); if(el) el.disabled = !canEdit; });
+
+  const btnNew = document.getElementById("btnNewCustom");
+  if (btnNew) btnNew.style.display = canEdit ? "inline-block" : "none";
+
+  const del = document.getElementById("btnDeleteCustom");
+  if (del) del.style.display = canDelete ? (document.getElementById("customId").value ? "inline-block":"none") : "none";
+
+  if (hint) {
+    hint.innerHTML = canEdit ? "" : "🔒 Tu perfil no puede editar respuestas. Pide acceso de editor/super.";
+  }
+
+  const saveBtn = document.querySelector("#custom .btn.primary");
+  if (saveBtn) saveBtn.style.display = canEdit ? "inline-block" : "none";
+}
+
+async function loadCustomReplies() {
+  try {
+    await loadVideos(true); // precargar videos para selector
+    const r = await fetch(CUSTOM_URL, { headers: { Authorization: "Bearer " + token }});
+    customCache = await r.json();
+
+    renderCustomTable(customCache);
+    newCustom();
+    applyPermsToCustomForm();
+
+    const search = document.getElementById("customSearch");
+    if (search) {
+      search.oninput = () => {
+        const q = search.value.toLowerCase().trim();
+        const filtered = !q ? customCache : customCache.filter(x => {
+          const t = (x.trigger||x.question||"").toLowerCase();
+          const kws = (x.keywords||[]).join(",").toLowerCase();
+          return t.includes(q) || kws.includes(q);
+        });
+        renderCustomTable(filtered);
+      };
+    }
+
+  } catch (e) {
+    toast("No se pudieron cargar respuestas", "error");
+    console.error(e);
+  }
+}
+
+function renderCustomTable(rows) {
+  const tbody = document.getElementById("customTable");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  rows.forEach(r => {
+    const tr = document.createElement("tr");
+    const trig = r.trigger || r.question || "";
+    const type = r.type || "text";
+    const pr = r.priority ?? 1;
+    const enabled = r.enabled !== false;
+
+    tr.innerHTML = `
+      <td>${escapeHtml(trig)}</td>
+      <td><span class="badge ${type}">${type}</span></td>
+      <td>${pr}</td>
+      <td><span class="badge ${enabled?'':'off'}">${enabled?'ON':'OFF'}</span></td>
+      <td>
+        <button class="btn" onclick="editCustom('${r._id}')">✏️</button>
+        ${roleAtLeast("super") ? `<button class="btn danger" onclick="deleteCustomById('${r._id}')">🗑️</button>` : ``}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function editCustom(id) {
+  const r = customCache.find(x => x._id === id);
+  if (!r) return;
+
+  document.getElementById("customId").value = r._id;
+  document.getElementById("triggerInput").value = r.trigger || r.question || "";
+  document.getElementById("responseInput").value = r.response || r.answer || "";
+  document.getElementById("keywordsInput").value = Array.isArray(r.keywords) ? r.keywords.join(", ") : "";
+  document.getElementById("priorityInput").value = r.priority ?? 10;
+  document.getElementById("typeInput").value = r.type || "text";
+  document.getElementById("enabledInput").checked = r.enabled !== false;
+
+  document.getElementById("videoUrlInput").value = r.video_url || "";
+  // if stored file, try to match by url
+  const match = videosCache.find(v => v.url === r.video_file);
+  fillVideoSelect(match?._id || "");
+  onTypeChange();
+  applyPermsToCustomForm();
+
+  if (roleAtLeast("super")) {
+    document.getElementById("btnDeleteCustom").style.display = "inline-block";
+  }
+}
+
+async function saveCustom() {
+  if (!roleAtLeast("editor")) return toast("Sin permiso para editar", "error");
+
+  const id = document.getElementById("customId").value;
+  const trigger = document.getElementById("triggerInput").value.trim();
+  const response = document.getElementById("responseInput").value.trim();
+  const keywords = document.getElementById("keywordsInput").value;
+  const priority = Number(document.getElementById("priorityInput").value || 1);
+  const type = document.getElementById("typeInput").value;
+  const enabled = document.getElementById("enabledInput").checked;
+
+  const vidSelId = document.getElementById("videoSelect").value;
+  const external = document.getElementById("videoUrlInput").value.trim();
+  const chosen = videosCache.find(v => v._id === vidSelId);
+
+  const payload = {
+    trigger,
+    response,
+    keywords,
+    priority,
+    type,
+    enabled,
+    video_url: type === "video" ? external : "",
+    video_file: type === "video" ? (external ? "" : (chosen?.url || "")) : "",
+    video_name: type === "video" ? (chosen?.originalName || "") : ""
+  };
+
+  if (!trigger || !response) return toast("Trigger y respuesta son obligatorios", "error");
+
+  try {
+    const url = id ? `${CUSTOM_URL}/${id}` : CUSTOM_URL;
+    const method = id ? "PUT" : "POST";
+    const r = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Error guardando");
+
+    toast("Guardado", "success");
+    await loadCustomReplies();
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Error", "error");
+  }
+}
+
+async function deleteCustom() {
+  const id = document.getElementById("customId").value;
+  if (!id) return;
+  return deleteCustomById(id);
+}
+
+async function deleteCustomById(id) {
+  if (!roleAtLeast("super")) return toast("Solo super puede eliminar", "error");
+  if (!confirm("¿Eliminar esta respuesta?")) return;
+  try {
+    const r = await fetch(`${CUSTOM_URL}/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Error eliminando");
+    toast("Eliminado", "success");
+    await loadCustomReplies();
+  } catch (e) {
+    toast(e.message || "Error", "error");
+  }
+}
+
+// =============================
+// VIDEOS LIBRARY
+// =============================
+async function loadVideos(silent=false) {
+  try {
+    const r = await fetch(`${ADMIN_API}/videos`, { headers: { Authorization: "Bearer " + token }});
+    videosCache = await r.json();
+    fillVideoSelect(document.getElementById("videoSelect")?.value || "");
+    renderVideosTable();
+    if (!silent) toast("Videos cargados", "success");
+    return videosCache;
+  } catch (e) {
+    console.error(e);
+    if (!silent) toast("No se pudieron cargar videos", "error");
+    videosCache = [];
+    return [];
+  }
+}
+
+function renderVideosTable() {
+  const tbody = document.getElementById("videosTable");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  videosCache.forEach(v => {
+    const tr = document.createElement("tr");
+    const delBtn = roleAtLeast("super") ? `<button class="btn danger" onclick="deleteVideo('${v._id}')">🗑️</button>` : "";
+    tr.innerHTML = `
+      <td>${escapeHtml(v.originalName || v.filename)}</td>
+      <td>${new Date(v.createdAt).toLocaleString()}</td>
+      <td>
+        <button class="btn" onclick="previewVideo('${v._id}')">👁️</button>
+        ${delBtn}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // disable upload if no permission
+  const file = document.getElementById("videoFile");
+  const upBtn = document.querySelector("#videos .btn.primary");
+  if (file) file.disabled = !roleAtLeast("editor");
+  if (upBtn) upBtn.style.display = roleAtLeast("editor") ? "inline-block" : "none";
+}
+
+function previewVideo(id) {
+  const v = videosCache.find(x => x._id === id);
+  const box = document.getElementById("videoLibraryPreview");
+  if (!box || !v) return;
+  box.innerHTML = `<div class="hint"><b>${escapeHtml(v.originalName)}</b></div>
+    <video src="${v.url}" controls style="width:100%;max-height:380px;border-radius:10px"></video>`;
+}
+
+async function uploadVideo() {
+  if (!roleAtLeast("editor")) return toast("Sin permiso para subir", "error");
+  const fileInput = document.getElementById("videoFile");
+  const file = fileInput?.files?.[0];
+  if (!file) return toast("Selecciona un video", "error");
+
+  const fd = new FormData();
+  fd.append("video", file);
+
+  try {
+    const r = await fetch(`${ADMIN_API}/videos`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token },
+      body: fd,
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Error subiendo");
+
+    toast("Video subido", "success");
+    fileInput.value = "";
+    await loadVideos(true);
+    await loadCustomReplies(); // refresca selector
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Error", "error");
+  }
+}
+
+async function deleteVideo(id) {
+  if (!roleAtLeast("super")) return toast("Solo super puede eliminar", "error");
+  if (!confirm("¿Eliminar este video?")) return;
+  try {
+    const r = await fetch(`${ADMIN_API}/videos/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Error eliminando");
+
+    toast("Video eliminado", "success");
+    await loadVideos(true);
+    await loadCustomReplies();
+  } catch (e) {
+    toast(e.message || "Error", "error");
+  }
+}
+
+// util
+function escapeHtml(str="") {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}

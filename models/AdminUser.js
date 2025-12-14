@@ -7,18 +7,8 @@ const AdminUserSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: {
       type: String,
-      // Roles nuevos (recomendados): support, analyst, editor, super
-      // Roles legacy (compatibilidad): viewer, admin, superadmin
-      enum: [
-        "support",
-        "analyst",
-        "editor",
-        "super",
-        "viewer",
-        "admin",
-        "superadmin",
-      ],
-      default: "support",
+      enum: ["super","editor","analyst","support","superadmin","admin","viewer"],
+      default: "viewer",
     },
     active: { type: Boolean, default: true },
   },

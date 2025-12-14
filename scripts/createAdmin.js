@@ -1,8 +1,8 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 
-// Modelo de usuarios admin
-const AdminUser = require("../models/AdminUser");
+// ✅ RUTA REAL (DOBLE utneza-chatbot)
+const AdminUser = require("../utneza-chatbot/models/AdminUser.js");
 
 async function createAdmin() {
   await mongoose.connect(process.env.MONGO_URI);
@@ -16,7 +16,7 @@ async function createAdmin() {
   await AdminUser.create({
     username: "admin",
     password: "12345",
-    role: "super",
+    role: "superadmin",
     active: true,
   });
 
