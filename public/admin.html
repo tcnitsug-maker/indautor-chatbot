@@ -26,6 +26,7 @@
   <button data-tab="ipHistory">📜 Historial por IP</button>
   <button data-tab="messages">💬 Historial General</button>
   <button data-tab="custom">🧠 Respuestas Personalizadas</button>
+  <button data-tab="users" id="usersTabBtn" style="display:none;">👥 Usuarios</button>
 </div>
 
 <main>
@@ -111,6 +112,40 @@
         <tr><th>Pregunta</th><th>Respuesta</th><th>Keywords</th><th>Eliminar</th></tr>
       </thead>
       <tbody id="customTable"></tbody>
+    </table>
+  </section>
+
+  <!-- USERS (solo SUPER) -->
+  <section id="users" class="tab-content">
+    <h2>👥 Usuarios Administradores</h2>
+
+    <div class="card">
+      <h3>Crear usuario</h3>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <input id="newUser" placeholder="Usuario" style="min-width:200px;" />
+        <input id="newPass" type="password" placeholder="Contraseña" style="min-width:200px;" />
+        <select id="newRole" style="min-width:180px;">
+          <option value="support">Support</option>
+          <option value="analyst">Analyst</option>
+          <option value="editor">Editor</option>
+          <option value="super">Super</option>
+        </select>
+        <button onclick="createAdminUser()">Crear</button>
+      </div>
+      <p style="opacity:.75;margin-top:8px;">* Solo <b>Super</b> puede ver y administrar usuarios.</p>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Rol</th>
+          <th>Activo</th>
+          <th>Creado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="usersTable"></tbody>
     </table>
   </section>
 

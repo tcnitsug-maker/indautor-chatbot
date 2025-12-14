@@ -5,6 +5,43 @@ const token = localStorage.token;
 if (!token) location.href = "/admin-login.html";
 
 // =============================
+// ROLES (support < analyst < editor < super)
+// =============================
+const ROLE_ORDER = ["support", "analyst", "editor", "super"];
+
+function decodeJwt(jwt) {
+  try {
+    const payload = jwt.split(".")[1];
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(decodeURIComponent(escape(json)));
+  } catch (_) {
+    return {};
+  }
+}
+
+function normalizeRole(role) {
+  const r = String(role || "").toLowerCase();
+  if (r === "viewer") return "analyst";
+  if (r === "admin") return "editor";
+  if (r === "superadmin") return "super";
+  if (ROLE_ORDER.includes(r)) return r;
+  return "support";
+}
+
+const currentAdmin = (() => {
+  const p = decodeJwt(token);
+  return {
+    id: p.id,
+    username: p.username,
+    role: normalizeRole(p.role),
+  };
+})();
+
+function can(minRole) {
+  return ROLE_ORDER.indexOf(currentAdmin.role) >= ROLE_ORDER.indexOf(minRole);
+}
+
+// =============================
 // CONFIG
 // =============================
 const ADMIN_API = "/admin";
@@ -85,6 +122,16 @@ function toast(msg, type = "info") {
 // TABS
 // =============================
 function setActiveTab(tabId) {
+  // Hard guard (por si alguien fuerza el tab)
+  if (tabId === "custom" && !can("editor")) {
+    toast("No tienes permisos para editar respuestas personalizadas.", "error");
+    tabId = "dashboard";
+  }
+  if (tabId === "users" && !can("super")) {
+    toast("No tienes permisos para administrar usuarios.", "error");
+    tabId = "dashboard";
+  }
+
   document.querySelectorAll(".tab-content").forEach((sec) => {
     sec.classList.toggle("active", sec.id === tabId);
   });
@@ -96,9 +143,21 @@ function setActiveTab(tabId) {
   if (tabId === "ips") loadIPs();
   if (tabId === "messages") loadGeneralHistory();
   if (tabId === "custom") loadCustomReplies();
+  if (tabId === "users") loadAdminUsers();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  // UI según rol
+  try {
+    const btnUsers = document.getElementById("usersTabBtn");
+    if (btnUsers) btnUsers.style.display = can("super") ? "" : "none";
+
+    const btnCustom = document.querySelector('#navbar button[data-tab="custom"]');
+    if (btnCustom) btnCustom.style.display = can("editor") ? "" : "none";
+  } catch (e) {
+    console.warn("No se pudo aplicar UI por rol", e);
+  }
+
   document.querySelectorAll("#navbar button").forEach((btn) => {
     btn.addEventListener("click", () => setActiveTab(btn.getAttribute("data-tab")));
   });
@@ -373,6 +432,95 @@ async function loadCustomReplies() {
   } catch (err) {
     console.error(err);
     toast("Error cargando respuestas personalizadas", "error");
+  }
+}
+
+// =============================
+// USERS (solo SUPER)
+// =============================
+async function loadAdminUsers() {
+  if (!can("super")) return;
+  const tbody = document.getElementById("usersTable");
+  if (!tbody) return;
+  tbody.innerHTML = "<tr><td colspan='5'>Cargando...</td></tr>";
+  try {
+    const users = await fetchJson(`${ADMIN_API}/users`);
+    if (!users.length) {
+      tbody.innerHTML = "<tr><td colspan='5'>Sin usuarios</td></tr>";
+      return;
+    }
+    tbody.innerHTML = "";
+    for (const u of users) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(u.username)}</td>
+        <td>
+          <select data-user-id="${u._id}" class="roleSelect">
+            <option value="support">support</option>
+            <option value="analyst">analyst</option>
+            <option value="editor">editor</option>
+            <option value="super">super</option>
+          </select>
+        </td>
+        <td>
+          <input type="checkbox" data-user-id="${u._id}" class="activeToggle" />
+        </td>
+        <td>${formatDate(u.createdAt)}</td>
+        <td>
+          <button data-user-id="${u._id}" class="saveUserBtn">Guardar</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+
+      // set values
+      const sel = tr.querySelector(".roleSelect");
+      if (sel) sel.value = normalizeRole(u.role);
+      const chk = tr.querySelector(".activeToggle");
+      if (chk) chk.checked = !!u.active;
+    }
+
+    // bind events
+    tbody.querySelectorAll(".saveUserBtn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-user-id");
+        const row = btn.closest("tr");
+        const role = row.querySelector(".roleSelect")?.value;
+        const active = row.querySelector(".activeToggle")?.checked;
+        try {
+          await fetchJson(`${ADMIN_API}/users/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ role, active }),
+          });
+          toast("Usuario actualizado", "success");
+        } catch (e) {
+          toast(e.message || "Error actualizando usuario", "error");
+        }
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = "<tr><td colspan='5'>Error cargando usuarios</td></tr>";
+    toast("No se pudieron cargar usuarios", "error");
+  }
+}
+
+async function createAdminUser() {
+  if (!can("super")) return toast("Solo SUPER puede crear usuarios", "error");
+  const user = document.getElementById("newUser")?.value?.trim();
+  const pass = document.getElementById("newPass")?.value;
+  const role = document.getElementById("newRole")?.value || "support";
+  if (!user || !pass) return toast("Faltan usuario/contraseña", "error");
+  try {
+    await fetchJson(`${ADMIN_API}/users`, {
+      method: "POST",
+      body: JSON.stringify({ username: user, password: pass, role }),
+    });
+    document.getElementById("newUser").value = "";
+    document.getElementById("newPass").value = "";
+    toast("Usuario creado", "success");
+    loadAdminUsers();
+  } catch (err) {
+    toast(err.message || "No se pudo crear usuario", "error");
   }
 }
 

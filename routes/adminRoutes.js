@@ -6,11 +6,27 @@ const CustomReply = require("../models/CustomReply");
 const fetch = require("node-fetch");
 const PDFDocument = require("pdfkit"); // npm install pdfkit
 
+// -----------------------------------------------------------------------
+// Roles: support < analyst < editor < super
+// `req.admin.role` ya viene normalizado por middleware/authAdmin.js
+// -----------------------------------------------------------------------
+const ROLE_ORDER = ["support", "analyst", "editor", "super"];
+
+function requireRole(minRole) {
+  return (req, res, next) => {
+    const userRole = req.admin?.role || "support";
+    const u = ROLE_ORDER.indexOf(userRole);
+    const r = ROLE_ORDER.indexOf(minRole);
+    if (u < r) return res.status(403).json({ error: "Permisos insuficientes" });
+    next();
+  };
+}
+
 // =======================================================================
 // 1. GET /admin/messages  → Historial general con filtros
 //    Query params opcionales: ?from=YYYY-MM-DD&to=YYYY-MM-DD&ip=&role=&q=
 // =======================================================================
-router.get("/messages", async (req, res) => {
+router.get("/messages", requireRole("support"), async (req, res) => {
   try {
     const { from, to, ip, role, q } = req.query;
     const filter = {};
@@ -40,7 +56,7 @@ router.get("/messages", async (req, res) => {
 // =======================================================================
 // 2. GET /admin/messages/export-csv  → Exportar historial (con filtros) CSV
 // =======================================================================
-router.get("/messages/export-csv", async (req, res) => {
+router.get("/messages/export-csv", requireRole("analyst"), async (req, res) => {
   try {
     const { from, to, ip, role, q } = req.query;
     const filter = {};
@@ -89,7 +105,7 @@ router.get("/messages/export-csv", async (req, res) => {
 // =======================================================================
 // 3. GET /admin/custom-replies → Listar respuestas personalizadas
 // =======================================================================
-router.get("/custom-replies", async (req, res) => {
+router.get("/custom-replies", requireRole("analyst"), async (req, res) => {
   try {
     const replies = await CustomReply.find().lean();
     res.json(replies);
@@ -102,7 +118,7 @@ router.get("/custom-replies", async (req, res) => {
 // =======================================================================
 // 4. POST /admin/custom-replies → Crear respuesta personalizada
 // =======================================================================
-router.post("/custom-replies", async (req, res) => {
+router.post("/custom-replies", requireRole("editor"), async (req, res) => {
   try {
     const { question, answer, keywords } = req.body;
 
@@ -123,7 +139,7 @@ router.post("/custom-replies", async (req, res) => {
 // =======================================================================
 // 5. DELETE /admin/custom-replies/:id → Eliminar respuesta personalizada
 // =======================================================================
-router.delete("/custom-replies/:id", async (req, res) => {
+router.delete("/custom-replies/:id", requireRole("editor"), async (req, res) => {
   try {
     await CustomReply.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
@@ -136,7 +152,7 @@ router.delete("/custom-replies/:id", async (req, res) => {
 // =======================================================================
 // 6. GET /admin/custom-replies/export-csv → Exportar custom replies CSV
 // =======================================================================
-router.get("/custom-replies/export-csv", async (req, res) => {
+router.get("/custom-replies/export-csv", requireRole("analyst"), async (req, res) => {
   try {
     const replies = await CustomReply.find().lean();
 
@@ -165,7 +181,7 @@ router.get("/custom-replies/export-csv", async (req, res) => {
 // =======================================================================
 // 7. GET /admin/custom-replies/export-pdf → Exportar custom replies a PDF
 // =======================================================================
-router.get("/custom-replies/export-pdf", async (req, res) => {
+router.get("/custom-replies/export-pdf", requireRole("analyst"), async (req, res) => {
   try {
     const replies = await CustomReply.find().lean();
     res.setHeader("Content-Type", "application/pdf");
@@ -194,7 +210,7 @@ router.get("/custom-replies/export-pdf", async (req, res) => {
 // =======================================================================
 // 8. IPs + estadísticas (igual que antes) + flag de SPAM si total alto
 // =======================================================================
-router.get("/ips", async (req, res) => {
+router.get("/ips", requireRole("analyst"), async (req, res) => {
   try {
     const messages = await Message.find({}, { ip: 1, createdAt: 1 }).lean();
     const stats = {};
@@ -230,7 +246,7 @@ router.get("/ips", async (req, res) => {
 // =======================================================================
 // 9. Info IP (geolocalización)
 // =======================================================================
-router.get("/ipinfo/:ip", async (req, res) => {
+router.get("/ipinfo/:ip", requireRole("analyst"), async (req, res) => {
   try {
     const ip = req.params.ip;
     const url = `http://ip-api.com/json/${ip}?fields=status,country,regionName,city,isp,query,lat,lon`;
@@ -248,7 +264,7 @@ router.get("/ipinfo/:ip", async (req, res) => {
 // =======================================================================
 // 10. Historial por IP
 // =======================================================================
-router.get("/messages/ip/:ip", async (req, res) => {
+router.get("/messages/ip/:ip", requireRole("analyst"), async (req, res) => {
   try {
     const msgs = await Message.find({ ip: req.params.ip }).sort({ createdAt: -1 }).lean();
     res.json(msgs);
@@ -261,7 +277,7 @@ router.get("/messages/ip/:ip", async (req, res) => {
 // =======================================================================
 // 11. Top IPs (para gráficas avanzadas)
 // =======================================================================
-router.get("/stats/top-ips", async (req, res) => {
+router.get("/stats/top-ips", requireRole("analyst"), async (req, res) => {
   try {
     const agg = await Message.aggregate([
       { $match: { ip: { $ne: null } } },
@@ -279,7 +295,7 @@ router.get("/stats/top-ips", async (req, res) => {
 // =======================================================================
 // 12. Top textos (frases más usadas) - muy simple
 // =======================================================================
-router.get("/stats/top-texts", async (req, res) => {
+router.get("/stats/top-texts", requireRole("analyst"), async (req, res) => {
   try {
     const agg = await Message.aggregate([
       { $group: { _id: "$text", total: { $sum: 1 } } },
@@ -299,14 +315,86 @@ router.get("/stats/top-texts", async (req, res) => {
 // =======================================================================
 const blockedIPs = new Set();
 
-router.get("/blocked-ips", (req, res) => {
+router.get("/blocked-ips", requireRole("analyst"), (req, res) => {
   res.json(Array.from(blockedIPs));
 });
 
-router.post("/block-ip", (req, res) => {
+router.post("/block-ip", requireRole("editor"), (req, res) => {
   const { ip } = req.body;
   if (!ip) return res.status(400).json({ error: "Falta IP" });
   blockedIPs.add(ip);
   res.json({ ok: true, blocked: ip });
+});
+
+// =======================================================================
+// 14. GESTIÓN DE USUARIOS ADMIN (solo SUPER)
+// =======================================================================
+const AdminUser = require("../models/AdminUser");
+
+// GET /admin/users  -> lista usuarios
+router.get("/users", requireRole("super"), async (req, res) => {
+  try {
+    const users = await AdminUser.find()
+      .select("username role active createdAt updatedAt")
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(users);
+  } catch (err) {
+    console.error("Error listando users:", err);
+    res.status(500).json({ error: "No se pudieron obtener usuarios." });
+  }
+});
+
+// POST /admin/users  -> crea usuario
+router.post("/users", requireRole("super"), async (req, res) => {
+  try {
+    const { username, password, role } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: "Faltan datos" });
+    }
+    const user = await AdminUser.create({
+      username,
+      password,
+      role: role || "support",
+      active: true,
+    });
+    res.json({
+      id: user._id,
+      username: user.username,
+      role: user.role,
+      active: user.active,
+    });
+  } catch (err) {
+    console.error("Error creando user:", err);
+    if (err.code === 11000) {
+      return res.status(400).json({ error: "Usuario ya existe" });
+    }
+    res.status(500).json({ error: "No se pudo crear usuario" });
+  }
+});
+
+// PATCH /admin/users/:id  -> actualizar role/active
+router.patch("/users/:id", requireRole("super"), async (req, res) => {
+  try {
+    const { role, active } = req.body;
+    const update = {};
+    if (role) update.role = role;
+    if (typeof active === "boolean") update.active = active;
+
+    const user = await AdminUser.findByIdAndUpdate(req.params.id, update, {
+      new: true,
+    }).select("username role active");
+
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+    res.json({
+      id: user._id,
+      username: user.username,
+      role: user.role,
+      active: user.active,
+    });
+  } catch (err) {
+    console.error("Error actualizando user:", err);
+    res.status(500).json({ error: "No se pudo actualizar usuario" });
+  }
 });
 module.exports = router;
