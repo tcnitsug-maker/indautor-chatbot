@@ -318,3 +318,12 @@ router.post("/unblock-ip", (req, res) => {
 });
 
 module.exports = router;
+const express = require("express");
+const router = express.Router();
+
+// rutas aquí
+router.get("/ping", (req, res) => {
+  res.json({ ok: true, admin: req.admin });
+});
+
+module.exports = router;
