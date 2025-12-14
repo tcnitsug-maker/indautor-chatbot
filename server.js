@@ -59,6 +59,9 @@ app.use("/setup", require("./routes/setupRoutes"));
 // RUTAS PROTEGIDAS ADMIN
 // =====================
 const authAdmin = require("./middleware/authAdmin");
+
+app.use("/admin-auth", require("./routes/adminAuthRoutes"));
+app.use("/admin", authAdmin("viewer"), require("./routes/adminRoutes"));
 app.use("/admin", authAdmin("viewer"), require("./routes/adminRoutes"));
 
 // =====================
