@@ -2,45 +2,117 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Login Admin INDARELÍN</title>
+  <title>Login Administrador</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b1c2d;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .login-box {
+      background: #132f4c;
+      padding: 30px;
+      border-radius: 8px;
+      width: 300px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 12px;
+      border: none;
+      border-radius: 4px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #1976d2;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background: #1565c0;
+    }
+
+    #error {
+      margin-top: 10px;
+      color: #ff8080;
+      text-align: center;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Acceso Administrativo</h2>
 
-  <input id="user" placeholder="Usuario" />
-  <br /><br />
-  <input id="pass" type="password" placeholder="Contraseña" />
-  <br /><br />
-  <button onclick="login()">Entrar</button>
+  <div class="login-box">
+    <h2>Acceso Administrador</h2>
+
+    <input type="text" id="username" placeholder="Usuario" />
+    <input type="password" id="password" placeholder="Contraseña" />
+
+    <button onclick="login()">Entrar</button>
+
+    <div id="error"></div>
+  </div>
 
   <script>
-   async function login() {
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
+    async function login() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const errorBox = document.getElementById("error");
 
-  const res = await fetch("/admin-auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password })
-  });
+      errorBox.innerText = "";
 
-  const data = await res.json();
+      if (!username || !password) {
+        errorBox.innerText = "Debes ingresar usuario y contraseña";
+        return;
+      }
 
-  if (!res.ok || !data.token) {
-    document.getElementById("error").innerText =
-      data.error || "Error de login";
-    return;
-  }
+      try {
+        const res = await fetch("/admin-auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
 
-  // ✅ Guardar token
-  localStorage.setItem("admin_token", data.token);
-  localStorage.setItem("admin_user", data.username);
-  localStorage.setItem("admin_role", data.role);
+        const data = await res.json();
 
-  // 👉 Ir al panel
-  window.location.href = "/admin.html";
-}
-</script>
+        if (!res.ok || !data.token) {
+          errorBox.innerText = data.error || "Credenciales incorrectas";
+          return;
+        }
+
+        // ✅ Guardar sesión
+        localStorage.setItem("admin_token", data.token);
+        localStorage.setItem("admin_user", data.username);
+        localStorage.setItem("admin_role", data.role);
+
+        // 👉 Ir al panel
+        window.location.replace("/admin.html");
+
+      } catch (err) {
+        errorBox.innerText = "Error de conexión con el servidor";
+      }
+    }
+  </script>
 
 </body>
 </html>
