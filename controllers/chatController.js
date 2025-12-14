@@ -1,20 +1,20 @@
-const Message = require("../models/Message");
-const CustomReply = require("../models/CustomReply");
-const fetch = require("node-fetch");
+import fetch from "node-fetch";
+import Message from "../models/Message.js";
+import CustomReply from "../models/CustomReply.js";
 
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-// ----------------------
-// Anti-flood
-// ----------------------
+// ======================
+// ANTI-FLOOD
+// ======================
 const FLOOD_MIN_DELAY = 3000;
 const FLOOD_MAX_BURST = 4;
 const FLOOD_BLOCK_TIME = 10000;
 
-const floodMap = new Map(); // ip -> { lastTime, count, blockedUntil }
+const floodMap = new Map();
 
 function checkFlood(ip) {
   const now = Date.now();
@@ -47,9 +47,9 @@ function checkFlood(ip) {
   return { blocked: false };
 }
 
-// ----------------------
-// Custom replies
-// ----------------------
+// ======================
+// CUSTOM REPLIES
+// ======================
 function normalize(text) {
   return (text || "")
     .toLowerCase()
@@ -76,9 +76,9 @@ async function findCustomReply(userText) {
   return null;
 }
 
-// ----------------------
-// OpenAI
-// ----------------------
+// ======================
+// OPENAI
+// ======================
 async function callOpenAI(messages) {
   if (!OPENAI_API_KEY) return null;
 
@@ -105,9 +105,9 @@ async function callOpenAI(messages) {
   }
 }
 
-// ----------------------
-// Gemini
-// ----------------------
+// ======================
+// GEMINI
+// ======================
 async function callGemini(messages) {
   if (!GEMINI_API_KEY) return null;
 
@@ -136,21 +136,23 @@ async function callGemini(messages) {
   }
 }
 
-// ----------------------
+// ======================
 // CONTROLLER
-// ----------------------
-exports.sendChat = async (req, res) => {
+// ======================
+export async function sendChat(req, res) {
   const io = req.app?.locals?.io;
 
   try {
-    const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || "unknown";
+    const ip =
+      req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+      req.ip ||
+      "unknown";
 
     // Anti-flood
     const flood = checkFlood(ip);
     if (flood.blocked) {
       const sec = Math.ceil(flood.wait / 1000);
 
-      // 🔴 ALERTA EN VIVO AL PANEL
       io?.emit("spam_alert", {
         ip,
         reason: "FLOOD",
@@ -165,26 +167,41 @@ exports.sendChat = async (req, res) => {
     }
 
     const userMessage = req.body?.message?.trim();
-    if (!userMessage) return res.status(400).json({ reply: "Debes escribir un mensaje." });
+    if (!userMessage) {
+      return res.status(400).json({ reply: "Debes escribir un mensaje." });
+    }
 
     // Guardar USER
-    const userDoc = await Message.create({ role: "user", text: userMessage, ip });
+    const userDoc = await Message.create({
+      role: "user",
+      text: userMessage,
+      ip,
+    });
     io?.emit("new_message", userDoc);
 
     // Custom reply
     const custom = await findCustomReply(userMessage);
     if (custom) {
-      const botDoc = await Message.create({ role: "bot", text: custom, ip, source: "custom" });
+      const botDoc = await Message.create({
+        role: "bot",
+        text: custom,
+        ip,
+        source: "custom",
+      });
       io?.emit("new_message", botDoc);
       return res.json({ reply: custom, source: "custom" });
     }
 
     const messages = [
-      { role: "system", content: "Eres el asistente INDARELÍN. Responde claro, respetuoso y útil." },
+      {
+        role: "system",
+        content:
+          "Eres el asistente INDARELÍN. Responde claro, respetuoso y útil.",
+      },
       { role: "user", content: userMessage },
     ];
 
-    // Gemini -> OpenAI fallback
+    // Gemini → OpenAI fallback
     let reply = await callGemini(messages);
     let source = "gemini";
 
@@ -194,19 +211,26 @@ exports.sendChat = async (req, res) => {
     }
 
     if (!reply) {
-      reply = "En este momento estamos experimentando alta demanda. Por favor intenta más tarde.";
+      reply =
+        "En este momento estamos experimentando alta demanda. Intenta más tarde.";
       source = "fallback";
     }
 
     // Guardar BOT
-    const botDoc = await Message.create({ role: "bot", text: reply, ip, source });
+    const botDoc = await Message.create({
+      role: "bot",
+      text: reply,
+      ip,
+      source,
+    });
     io?.emit("new_message", botDoc);
 
     return res.json({ reply, source });
   } catch (error) {
     console.error("Error en sendChat:", error);
     return res.status(500).json({
-      reply: "Estamos experimentando un problema técnico. Intenta nuevamente en unos minutos.",
+      reply:
+        "Estamos experimentando un problema técnico. Intenta nuevamente en unos minutos.",
     });
   }
-};
+}
