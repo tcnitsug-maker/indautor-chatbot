@@ -1,6 +1,9 @@
 const jwt = require("jsonwebtoken");
 
-module.exports = function authAdmin(requiredRole = "viewer") {
+export default function authAdmin(minRole = "viewer") {
+  ...
+}
+{
   return (req, res, next) => {
     const auth = req.headers.authorization;
     if (!auth) {
