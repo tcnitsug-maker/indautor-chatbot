@@ -20,7 +20,38 @@ if (!token) {
   window.location.href = "/admin-login.html";
 }
 </script>
+  const API_BASE = "";
 
+function authHeaders() {
+  const token = localStorage.getItem("admin_token");
+  return {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token
+  };
+}
+
+// Ejemplo: cargar mensajes
+async function loadMessages() {
+  const res = await fetch("/admin/messages", {
+    headers: authHeaders()
+  });
+
+  if (res.status === 401 || res.status === 403) {
+    logout();
+    return;
+  }
+
+  const data = await res.json();
+  console.log(data);
+}
+
+// Logout
+function logout() {
+  localStorage.removeItem("admin_token");
+  localStorage.removeItem("admin_user");
+  localStorage.removeItem("admin_role");
+  window.location.href = "/admin-login.html";
+}
 </head>
 <body>
 
