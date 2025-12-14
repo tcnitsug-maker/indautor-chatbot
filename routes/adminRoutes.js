@@ -309,21 +309,4 @@ router.post("/block-ip", (req, res) => {
   blockedIPs.add(ip);
   res.json({ ok: true, blocked: ip });
 });
-
-router.post("/unblock-ip", (req, res) => {
-  const { ip } = req.body;
-  if (!ip) return res.status(400).json({ error: "Falta IP" });
-  blockedIPs.delete(ip);
-  res.json({ ok: true, unblocked: ip });
-});
-
-module.exports = router;
-const express = require("express");
-const router = express.Router();
-
-// rutas aquí
-router.get("/ping", (req, res) => {
-  res.json({ ok: true, admin: req.admin });
-});
-
 module.exports = router;
