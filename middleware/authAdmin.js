@@ -3,13 +3,14 @@ const jwt = require("jsonwebtoken");
 
 module.exports = function authAdmin(requiredRole = null) {
   return (req, res, next) => {
-    const header = req.headers.authorization;
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
 
-    if (!header || !header.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "No autorizado" });
+    if (!token) {
+      return res.status(401).json({ error: "No autorizado (sin token)" });
     }
-
-    const token = header.replace("Bearer ", "");
 
     try {
       const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
@@ -28,4 +29,3 @@ module.exports = function authAdmin(requiredRole = null) {
     }
   };
 };
-
