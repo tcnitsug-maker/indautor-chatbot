@@ -1,4 +1,3 @@
-// routes/adminAuthRoutes.js
 const express = require("express");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
@@ -7,10 +6,6 @@ const AdminUser = require("../models/AdminUser");
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ error: "Faltan credenciales" });
-    }
 
     const user = await AdminUser.findOne({ username, active: true });
     if (!user) {
@@ -34,12 +29,12 @@ router.post("/login", async (req, res) => {
 
     res.json({
       token,
-      role: user.role,
       username: user.username,
+      role: user.role,
     });
   } catch (err) {
-    console.error("Error login admin:", err);
-    res.status(500).json({ error: "Error interno" });
+    console.error(err);
+    res.status(500).json({ error: "Error en login" });
   }
 });
 
