@@ -1,19 +1,34 @@
-require("dotenv").config();
+/*********************************************************
+ * SERVER.JS – INDARELÍN (ES MODULES)
+ *********************************************************/
 
-const express = require("express");
-const cors = require("cors");
-const mongoose = require("mongoose");
-const path = require("path");
-const http = require("http");
-const jwt = require("jsonwebtoken");
+import dotenv from "dotenv";
+dotenv.config();
 
+import express from "express";
+import cors from "cors";
+import mongoose from "mongoose";
+import path from "path";
+import http from "http";
+import jwt from "jsonwebtoken";
+import { fileURLToPath } from "url";
+
+// =====================
+// __dirname en ES Modules
+// =====================
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// =====================
+// APP + SERVER
+// =====================
 const app = express();
 const server = http.createServer(app);
 
 // =====================
 // SOCKET.IO
 // =====================
-const { Server } = require("socket.io");
+import { Server } from "socket.io";
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
@@ -42,7 +57,17 @@ app.use(express.static(path.join(__dirname, "public")));
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB conectado"))
-  .catch((e) => console.error("❌ MongoDB error:", e.message));
+  .catch((e) => {
+    console.error("❌ MongoDB error:", e.message);
+    process.exit(1);
+  });
+
+// =====================
+// HOME
+// =====================
+app.get("/", (req, res) => {
+  res.send("✔ INDARELÍN API OK");
+});
 
 // =====================
 // HTML ADMIN
@@ -58,29 +83,22 @@ app.get("/admin.html", (req, res) => {
 // =====================
 // AUTH ADMIN
 // =====================
-const adminAuthRoutes = require("./routes/adminAuthRoutes");
+import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 app.use("/admin-auth", adminAuthRoutes);
 
 // =====================
 // RUTAS ADMIN PROTEGIDAS
 // =====================
-const authAdmin = require("./middleware/authAdmin");
-const adminRoutes = require("./routes/adminRoutes");
+import authAdmin from "./middleware/authAdmin.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 app.use("/admin", authAdmin("viewer"), adminRoutes);
 
 // =====================
 // CHAT
 // =====================
-const chatController = require("./controllers/chatController");
-app.post("/chat", chatController.sendChat);
-
-// =====================
-// HOME
-// =====================
-app.get("/", (req, res) => {
-  res.send("✔ INDARELÍN API OK");
-});
+import { sendChat } from "./controllers/chatController.js";
+app.post("/chat", sendChat);
 
 // =====================
 // SOCKET AUTH
