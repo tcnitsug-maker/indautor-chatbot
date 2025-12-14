@@ -1,50 +1,60 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>PANEL-INDARELIN</title>
-  <link rel="stylesheet" href="./admin.css"/>
+  <meta charset="UTF-8" />
+  <title>Login Panel INDARELÍN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b1c2d;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .box {
+      background: #12263a;
+      padding: 30px;
+      border-radius: 8px;
+      width: 320px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    button {
+      background: #1e90ff;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+    #loginError {
+      color: #ff6b6b;
+      margin-top: 10px;
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-badge">🛡️</div>
-      <div>
-        <div style="font-size:14px; opacity:.9">PANEL-INDARELIN</div>
-        <div style="font-size:12px; opacity:.75">Acceso Administrativo</div>
-      </div>
-    </div>
-    <div class="userbox">
-      <span class="userchip">Backend</span>
-    </div>
+
+  <div class="box">
+    <h2>Panel INDARELÍN</h2>
+
+    <input id="username" placeholder="Usuario" />
+    <input id="password" type="password" placeholder="Contraseña" />
+
+    <button id="loginBtn">Entrar</button>
+
+    <div id="loginError"></div>
   </div>
 
-  <div class="content" style="max-width:520px; margin:24px auto;">
-    <div class="card">
-      <h2 style="margin:0 0 10px 0;">Iniciar sesión</h2>
-      <p style="margin:0 0 14px 0; color:var(--muted);">Ingresa tu <b>usuario</b> y <b>contraseña</b>.</p>
-
-      <div class="row">
-        <input id="username" type="text" placeholder="Usuario" />
-        <input id="password" type="password" placeholder="Contraseña" />
-        <button onclick="loginAdmin()">Entrar</button>
-        <div id="loginError" style="display:none;color:red;"></div>
-      </div>
-
-      <div class="row" style="margin-top:12px;">
-        <button class="btn primary" id="btnLogin">Entrar</button>
-        <button class="btn" id="btnLogout" title="Borra la sesión guardada">Cerrar sesión</button>
-      </div>
-
-      <div id="msg" class="notice hidden" style="margin-top:12px;"></div>
-      <div class="footer-note">Si no entra, revisa que tu endpoint <code>/admin/login</code> esté activo en el backend.</div>
-    </div>
-  </div>
-
-  <script src="./admin.js"></script>
-  <script>
-    AdminUI.mountLogin();
-  </script>
+  <!-- JS SIEMPRE AL FINAL -->
+  <script src="admin.js"></script>
 </body>
 </html>
