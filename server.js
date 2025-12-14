@@ -1,10 +1,11 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const path = require("path");
 const http = require("http");
 const jwt = require("jsonwebtoken");
-require("dotenv").config();
 
 const app = express();
 const server = http.createServer(app);
@@ -24,7 +25,7 @@ app.locals.io = io;
 const PORT = process.env.PORT || 3000;
 
 // =====================
-// MIDDLEWARES GLOBALES
+// MIDDLEWARES
 // =====================
 app.use(cors());
 app.use(express.json());
@@ -44,7 +45,7 @@ mongoose
   .catch((e) => console.error("❌ MongoDB error:", e.message));
 
 // =====================
-// HTML PÚBLICO
+// HTML ADMIN
 // =====================
 app.get("/admin-login.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin-login.html"));
@@ -55,17 +56,15 @@ app.get("/admin.html", (req, res) => {
 });
 
 // =====================
-// AUTH ADMIN (LOGIN)
+// AUTH ADMIN
 // =====================
-// ⚠️ adminAuthRoutes DEBE exportar router con module.exports
 const adminAuthRoutes = require("./routes/adminAuthRoutes");
 app.use("/admin-auth", adminAuthRoutes);
 
 // =====================
-// RUTAS PROTEGIDAS ADMIN
+// RUTAS ADMIN PROTEGIDAS
 // =====================
 const authAdmin = require("./middleware/authAdmin");
-// ⚠️ adminRoutes DEBE exportar router con module.exports
 const adminRoutes = require("./routes/adminRoutes");
 
 app.use("/admin", authAdmin("viewer"), adminRoutes);
@@ -73,7 +72,6 @@ app.use("/admin", authAdmin("viewer"), adminRoutes);
 // =====================
 // CHAT
 // =====================
-// ⚠️ chatController DEBE exportar { sendChat }
 const chatController = require("./controllers/chatController");
 app.post("/chat", chatController.sendChat);
 
@@ -98,7 +96,7 @@ io.use((socket, next) => {
 
     socket.admin = decoded;
     next();
-  } catch (err) {
+  } catch {
     next(new Error("BAD_TOKEN"));
   }
 });
