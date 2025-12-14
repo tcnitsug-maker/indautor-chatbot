@@ -4,9 +4,7 @@ export default function authAdmin(minRole = "viewer") {
   return (req, res, next) => {
     try {
       const auth = req.headers.authorization;
-      if (!auth) {
-        return res.status(401).json({ error: "NO_TOKEN" });
-      }
+      if (!auth) return res.status(401).json({ error: "NO_TOKEN" });
 
       const token = auth.split(" ")[1];
       const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
@@ -18,7 +16,7 @@ export default function authAdmin(minRole = "viewer") {
 
       req.admin = decoded;
       next();
-    } catch (err) {
+    } catch {
       return res.status(401).json({ error: "TOKEN_INVALIDO" });
     }
   };
