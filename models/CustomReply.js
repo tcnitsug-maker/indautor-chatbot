@@ -1,10 +1,12 @@
-const mongoose = require("mongoose");
+
+import mongoose from "mongoose";
 
 const CustomReplySchema = new mongoose.Schema({
-  question: String,
-  answer: String,
-  keywords: [String],
-  enabled: { type: Boolean, default: true },
-});
+  trigger: String,
+  response: String,
+  priority: { type: Number, default: 1 },
+  type: { type: String, enum: ["text", "video"], default: "text" },
+  video_url: String
+}, { timestamps: true });
 
-module.exports = mongoose.model("CustomReply", CustomReplySchema);
+export default mongoose.model("CustomReply", CustomReplySchema);
