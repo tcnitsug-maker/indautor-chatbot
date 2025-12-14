@@ -1,6 +1,8 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
-const AdminUser = require("../models/AdminUser");
+
+// ⚠️ RUTA CORRECTA (nota el ../utneza-chatbot/)
+const AdminUser = require("../utneza-chatbot/models/AdminUser");
 
 async function createAdmin() {
   await mongoose.connect(process.env.MONGO_URI);
@@ -8,7 +10,7 @@ async function createAdmin() {
   const exists = await AdminUser.findOne({ username: "admin" });
   if (exists) {
     console.log("⚠️ El admin ya existe");
-    process.exit();
+    process.exit(0);
   }
 
   await AdminUser.create({
@@ -19,7 +21,7 @@ async function createAdmin() {
   });
 
   console.log("✅ Admin del PANEL creado");
-  process.exit();
+  process.exit(0);
 }
 
 createAdmin();
