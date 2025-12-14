@@ -15,7 +15,7 @@ const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
-// Guardamos io para usarlo en controllers
+// Hacemos io global para controllers
 app.locals.io = io;
 
 const PORT = process.env.PORT || 3000;
@@ -23,7 +23,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public"));
+
+// ✅ ESTÁTICOS (CORRECTO PARA RENDER)
+app.use(express.static(path.join(__dirname, "public")));
 
 // =====================
 // MongoDB
@@ -34,12 +36,16 @@ mongoose
   .catch((e) => console.error("❌ MongoDB error:", e));
 
 // =====================
-// Rutas
+// Rutas públicas
 // =====================
 app.use("/admin-auth", require("./routes/adminAuthRoutes"));
 
-// Middleware admin (HTTP)
+// =====================
+// Middleware admin
+// =====================
 const authAdmin = require("./middleware/authAdmin");
+
+// Rutas protegidas
 app.use("/admin", authAdmin("viewer"), require("./routes/adminRoutes"));
 
 // Chat
@@ -58,22 +64,20 @@ io.use((socket, next) => {
 
     const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
 
-    // Roles permitidos: viewer, admin, superadmin
     const roles = ["viewer", "admin", "superadmin"];
     if (!roles.includes(decoded.role)) return next(new Error("BAD_ROLE"));
 
     socket.admin = decoded;
-    return next();
-  } catch (e) {
-    return next(new Error("BAD_TOKEN"));
+    next();
+  } catch {
+    next(new Error("BAD_TOKEN"));
   }
 });
 
 io.on("connection", (socket) => {
-  console.log("🟢 Admin conectado por socket:", socket.admin?.username);
-
+  console.log("🟢 Admin conectado:", socket.admin.username);
   socket.on("disconnect", () => {
-    console.log("🔴 Admin desconectado:", socket.admin?.username);
+    console.log("🔴 Admin desconectado:", socket.admin.username);
   });
 });
 
