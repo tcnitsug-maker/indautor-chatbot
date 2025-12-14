@@ -4,9 +4,6 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const AdminUser = require("../models/AdminUser");
 
-// ===============================
-// POST /admin-auth/login
-// ===============================
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -36,14 +33,13 @@ router.post("/login", async (req, res) => {
     );
 
     res.json({
-      ok: true,
       token,
       role: user.role,
       username: user.username,
     });
   } catch (err) {
-    console.error("Error en login admin:", err);
-    res.status(500).json({ error: "Error interno del servidor" });
+    console.error("Error login admin:", err);
+    res.status(500).json({ error: "Error interno" });
   }
 });
 
