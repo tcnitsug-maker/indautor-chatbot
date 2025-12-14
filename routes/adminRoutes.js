@@ -1,6 +1,12 @@
 // routes/adminRoutes.js
 const express = require("express");
 const router = express.Router();
+const adminController = require("../controllers/adminController");
+
+// 🔐 Cambiar contraseña
+router.post("/change-password", adminController.changePassword);
+
+module.exports = router;
 const Message = require("../models/Message");
 const CustomReply = require("../models/CustomReply");
 const fetch = require("node-fetch");
