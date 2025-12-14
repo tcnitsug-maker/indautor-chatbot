@@ -1,32 +1,80 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <title>Admin Login</title>
+  <meta charset="UTF-8" />
+  <title>Login Administrativo - INDARELÍN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .box {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      width: 320px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.2);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-size: 15px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #004aad;
+      color: white;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    button:hover {
+      background: #003b86;
+    }
+  </style>
 </head>
 <body>
-  <h2>Acceso Administrativo</h2>
+
+<div class="box">
+  <h2>🔐 Acceso Administrativo</h2>
   <input id="u" placeholder="Usuario" />
   <input id="p" type="password" placeholder="Contraseña" />
   <button onclick="login()">Entrar</button>
+</div>
 
-  <script>
-    async function login() {
-      const r = await fetch("/admin-auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: u.value,
-          password: p.value,
-        }),
-      });
-      const d = await r.json();
-      if (d.token) {
-        localStorage.token = d.token;
-        location.href = "/admin.html";
-      } else {
-        alert("Error de acceso");
-      }
-    }
-  </script>
+<script>
+async function login() {
+  const res = await fetch("/admin-auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: document.getElementById("u").value,
+      password: document.getElementById("p").value
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.token) {
+    localStorage.token = data.token;
+    location.href = "/admin.html";
+  } else {
+    alert("Usuario o contraseña incorrectos");
+  }
+}
+</script>
+
 </body>
 </html>
