@@ -23,20 +23,25 @@ app.locals.io = io;
 // =====================
 const PORT = process.env.PORT || 3000;
 
+// =====================
+// MIDDLEWARES GLOBALES
+// =====================
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Archivos estáticos
+// =====================
+// ARCHIVOS ESTÁTICOS
+// =====================
 app.use(express.static(path.join(__dirname, "public")));
 
 // =====================
-// MongoDB
+// MONGODB
 // =====================
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB conectado"))
-  .catch((e) => console.error("❌ MongoDB error:", e));
+  .catch((e) => console.error("❌ MongoDB error:", e.message));
 
 // =====================
 // HTML PÚBLICO
@@ -52,18 +57,25 @@ app.get("/admin.html", (req, res) => {
 // =====================
 // AUTH ADMIN (LOGIN)
 // =====================
-app.use("/admin-auth", require("./routes/adminAuthRoutes"));
+// ⚠️ adminAuthRoutes DEBE exportar router con module.exports
+const adminAuthRoutes = require("./routes/adminAuthRoutes");
+app.use("/admin-auth", adminAuthRoutes);
 
 // =====================
 // RUTAS PROTEGIDAS ADMIN
 // =====================
 const authAdmin = require("./middleware/authAdmin");
-app.use("/admin", authAdmin("viewer"), require("./routes/adminRoutes"));
+// ⚠️ adminRoutes DEBE exportar router con module.exports
+const adminRoutes = require("./routes/adminRoutes");
+
+app.use("/admin", authAdmin("viewer"), adminRoutes);
 
 // =====================
 // CHAT
 // =====================
-app.post("/chat", require("./controllers/chatController").sendChat);
+// ⚠️ chatController DEBE exportar { sendChat }
+const chatController = require("./controllers/chatController");
+app.post("/chat", chatController.sendChat);
 
 // =====================
 // HOME
@@ -86,7 +98,7 @@ io.use((socket, next) => {
 
     socket.admin = decoded;
     next();
-  } catch {
+  } catch (err) {
     next(new Error("BAD_TOKEN"));
   }
 });
@@ -96,7 +108,7 @@ io.on("connection", (socket) => {
 });
 
 // =====================
-// START
+// START SERVER
 // =====================
 server.listen(PORT, () => {
   console.log(`🚀 Servidor listo en puerto ${PORT}`);
