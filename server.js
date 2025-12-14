@@ -37,18 +37,38 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // =====================
-// ARCHIVOS ESTÁTICOS GENERALES
-// =====================
-app.use(express.static(path.join(__dirname, "public")));
-
-// =====================
-// PANEL ADMIN (BACKEND)
-// URL FINAL: /admin-panel
+// PANEL ADMIN (FRONTEND) — DEBE IR PRIMERO
 // =====================
 app.use(
   "/admin-panel",
   express.static(path.join(__dirname, "public", "admin"))
 );
+
+app.get("/admin-panel", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
+});
+
+// =====================
+// ARCHIVOS ESTÁTICOS GENERALES
+// =====================
+app.use(express.static(path.join(__dirname, "public")));
+
+
+// =====================
+// PANEL ADMIN (BACKEND)
+// =====================
+app.use(
+  "/admin-panel",
+  express.static(path.join(__dirname, "public", "admin"))
+);
+
+app.get("/admin-panel", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
+});
+
+app.get("/admin-panel/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
+});
 // =====================
 // ADMIN PANEL ENTRYPOINT
 // =====================
