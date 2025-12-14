@@ -1,28 +1,28 @@
-// scripts/createAdmin.js
 require("dotenv").config();
 const mongoose = require("mongoose");
 const AdminUser = require("../models/AdminUser");
 
 async function createAdmin() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ Conectado a MongoDB");
+  await mongoose.connect(process.env.MONGO_URI);
 
-    const username = "admin";
-    const password = "admin123"; // ← puedes cambiarlo
-    const role = "superadmin";
+  const exists = await AdminUser.findOne({ username: "admin" });
+  if (exists) {
+    console.log("⚠️ El admin ya existe");
+    process.exit();
+  }
 
-    const exists = await AdminUser.findOne({ username });
-    if (exists) {
-      console.log("⚠️ El usuario admin ya existe");
-      process.exit(0);
-    }
+  const admin = await AdminUser.create({
+    username: "admin",
+    password: "12345",
+    role: "superadmin",
+    active: true,
+  });
 
-    await AdminUser.create({
-      username,
-      password,
-      role,
-    });
+  console.log("✅ Admin creado:", admin.username);
+  process.exit();
+}
+
+createAdmin();
 
     console.log("🎉 ADMIN CREADO CON ÉXITO");
     console.log("Usuario:", username);
