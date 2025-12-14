@@ -33,6 +33,8 @@ const { v4: uuidv4 } = require("uuid");
 const VideoAsset = require("../models/VideoAsset");
 const { normalizeRole } = require("../middleware/authAdmin");
 const AdminUser = require("../models/AdminUser");
+const BlockedIP = require("../models/BlockedIP");
+const Setting = require("../models/Setting");
 const XLSX = require("xlsx");
 
 
@@ -113,6 +115,101 @@ router.get("/messages/export-csv", async (req, res) => {
   } catch (err) {
     console.error("Error exportando CSV:", err);
     res.status(500).json({ error: "No se pudo exportar el historial." });
+  }
+});
+
+// =======================================================================
+// 3. GET /admin/messages/export-xlsx  → Exportar historial (con filtros) XLSX
+// =======================================================================
+router.get("/messages/export-xlsx", async (req, res) => {
+  try {
+    const { start, end, ip, source } = req.query;
+    const q = {};
+    if (start || end) {
+      q.createdAt = {};
+      if (start) q.createdAt.$gte = new Date(start);
+      if (end) q.createdAt.$lte = new Date(end);
+    }
+    if (ip) q.ip = ip;
+    if (source) q.source = source;
+
+    const rows = await Message.find(q).sort({ createdAt: -1 }).lean();
+
+    const data = rows.map(r => ({
+      Fecha: new Date(r.createdAt).toISOString(),
+      Rol: r.role,
+      Mensaje: r.text,
+      IP: r.ip || "",
+      Fuente: r.source || "",
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, "Mensajes");
+
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=mensajes.xlsx");
+    res.send(buf);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error exportando XLSX" });
+  }
+});
+
+// =======================================================================
+// 4. GET /admin/users/export-xlsx  → Exportar usuarios admin XLSX (super)
+// =======================================================================
+router.get("/users/export-xlsx", requireRole("super"), async (req, res) => {
+  try {
+    const rows = await AdminUser.find().select("username role active createdAt updatedAt").lean();
+    const data = rows.map(u => ({
+      Usuario: u.username,
+      Rol: u.role,
+      Activo: u.active ? "Sí" : "No",
+      Creado: u.createdAt ? new Date(u.createdAt).toISOString() : "",
+      Actualizado: u.updatedAt ? new Date(u.updatedAt).toISOString() : "",
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, "Usuarios");
+
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=usuarios.xlsx");
+    res.send(buf);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error exportando usuarios" });
+  }
+});
+
+// =======================================================================
+// 5. GET /admin/blocked-ips/export-xlsx → Exportar IPs bloqueadas XLSX (super)
+// =======================================================================
+router.get("/blocked-ips/export-xlsx", requireRole("super"), async (req, res) => {
+  try {
+    const rows = await BlockedIP.find().sort({ updatedAt: -1 }).lean();
+    const data = rows.map(r => ({
+      IP: r.ip,
+      Activo: r.active ? "Bloqueada" : "Desbloqueada",
+      Motivo: r.reason || "",
+      Creado: r.createdAt ? new Date(r.createdAt).toISOString() : "",
+      Actualizado: r.updatedAt ? new Date(r.updatedAt).toISOString() : "",
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, "IPs");
+
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=ips_bloqueadas.xlsx");
+    res.send(buf);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error exportando IPs" });
   }
 });
 
@@ -638,18 +735,57 @@ router.get("/stats/top-texts", async (req, res) => {
 });
 
 // =======================================================================
-// 13. BLOQUEO MANUAL DE IP (lista negra en memoria)
-//     Si quieres guardarlo en DB, luego lo movemos a un modelo.
 // =======================================================================
-const blockedIPs = new Set();
-
-router.get("/blocked-ips", (req, res) => {
-  res.json(Array.from(blockedIPs));
+// 13. BLOQUEO MANUAL DE IP (persistente en DB)
+//    - GET  /admin/blocked-ips
+//    - POST /admin/block-ip      {ip, reason?}
+//    - POST /admin/unblock-ip    {ip}
+// =======================================================================
+router.get("/blocked-ips", requireRole("super"), async (req, res) => {
+  try {
+    const rows = await BlockedIP.find().sort({ updatedAt: -1 }).lean();
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error obteniendo IPs bloqueadas" });
+  }
 });
 
-router.post("/block-ip", (req, res) => {
-  const { ip } = req.body;
-  if (!ip) return res.status(400).json({ error: "Falta IP" });
+router.post("/block-ip", requireRole("super"), async (req, res) => {
+  try {
+    const { ip, reason = "" } = req.body || {};
+    if (!ip) return res.status(400).json({ error: "Falta IP" });
+
+    const row = await BlockedIP.findOneAndUpdate(
+      { ip },
+      { $set: { active: true, reason, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },
+      { upsert: true, new: true }
+    );
+
+    res.json({ ok: true, blocked: row });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error bloqueando IP" });
+  }
+});
+
+router.post("/unblock-ip", requireRole("super"), async (req, res) => {
+  try {
+    const { ip } = req.body || {};
+    if (!ip) return res.status(400).json({ error: "Falta IP" });
+
+    const row = await BlockedIP.findOneAndUpdate(
+      { ip },
+      { $set: { active: false, updatedAt: new Date() } },
+      { new: true }
+    );
+
+    res.json({ ok: true, unblocked: ip, row });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error desbloqueando IP" });
+  }
+});
   blockedIPs.add(ip);
   res.json({ ok: true, blocked: ip });
 });
@@ -720,6 +856,43 @@ router.delete("/videos/:id", requireRole("super"), async (req, res) => {
   } catch (e) {
     console.error("Error borrando video:", e);
     res.status(500).json({ error: "No se pudo eliminar el video" });
+  }
+});
+
+
+// =======================================================================
+// 14. SETTINGS (límite IA)
+//    - GET  /admin/settings
+//    - PUT  /admin/settings/ai-limit   { ai_daily_limit_per_ip }
+// =======================================================================
+router.get("/settings", requireRole("super"), async (req, res) => {
+  try {
+    const rows = await Setting.find().lean();
+    const obj = {};
+    for (const r of rows) obj[r.key] = r.value;
+    res.json(obj);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error leyendo settings" });
+  }
+});
+
+router.put("/settings/ai-limit", requireRole("super"), async (req, res) => {
+  try {
+    const { ai_daily_limit_per_ip } = req.body || {};
+    const v = parseInt(ai_daily_limit_per_ip, 10);
+    if (!Number.isFinite(v) || v < 0 || v > 10000) {
+      return res.status(400).json({ error: "Valor inválido" });
+    }
+    const row = await Setting.findOneAndUpdate(
+      { key: "ai_daily_limit_per_ip" },
+      { $set: { value: v, updatedAt: new Date() } },
+      { upsert: true, new: true }
+    );
+    res.json({ ok: true, setting: row });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error guardando setting" });
   }
 });
 

@@ -31,6 +31,7 @@
 <div id="navbar">
   <button data-tab="dashboard">📈 Dashboard</button>
   <button data-tab="ips">🌍 IPs & Geolocalización</button>
+  <button data-tab="security">🔒 Seguridad (IPs)</button>
   <button data-tab="ipHistory">📜 Historial por IP</button>
   <button data-tab="messages">💬 Historial General</button>
   <button data-tab="custom">🧠 Respuestas</button>
@@ -86,6 +87,60 @@
       <tbody id="ipTable"></tbody>
     </table>
   </section>
+  <!-- SECURITY: BLOCKED IPS + IA LIMIT -->
+  <section id="security" class="tab-content">
+    <h2>🔒 Seguridad</h2>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>IPs bloqueadas</h3>
+          <div class="actions">
+            <button class="btn" onclick="loadBlockedIPs()">🔄 Recargar</button>
+            <button class="btn secondary" onclick="exportBlockedIPsXLSX()">⬇️ Exportar Excel</button>
+          </div>
+        </div>
+
+        <div class="form inline">
+          <input id="blockIpValue" class="input" placeholder="IP (ej: 187.210.10.10)" />
+          <input id="blockIpReason" class="input" placeholder="Motivo (opcional)" />
+          <button class="btn danger" onclick="blockIP()">Bloquear</button>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>IP</th>
+              <th>Estado</th>
+              <th>Motivo</th>
+              <th>Actualizado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="blockedIPsTable"></tbody>
+        </table>
+
+        <div class="hint">Solo <b>super</b> puede bloquear / desbloquear IPs.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Límite diario de IA (por IP)</h3>
+          <div class="actions">
+            <button class="btn" onclick="loadSettings()">🔄 Cargar</button>
+          </div>
+        </div>
+
+        <div class="form">
+          <label>Límite de consultas IA por día (0 = sin límite)</label>
+          <input id="aiLimitPerIp" class="input" type="number" min="0" max="10000" placeholder="Ej: 20" />
+          <button class="btn" onclick="saveAiLimit()">Guardar</button>
+          <div class="hint">Este límite aplica <b>solo</b> cuando el chatbot usa IA (Gemini/OpenAI). Las respuestas personalizadas no cuentan.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
 
   <!-- IP HISTORY -->
   <section id="ipHistory" class="tab-content">
@@ -228,6 +283,7 @@
         <div class="panel-header">
           <h3>Lista de usuarios</h3>
           <button class="btn" onclick="loadUsers()">🔄 Recargar</button>
+          <button class="btn" onclick="scrollToCreateUser()">➕ Agregar usuario</button>
         </div>
         <table class="table">
           <thead>

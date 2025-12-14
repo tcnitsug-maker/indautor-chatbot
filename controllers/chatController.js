@@ -1,4 +1,6 @@
 const Message = require("../models/Message");
+const BlockedIP = require("../models/BlockedIP");
+const Setting = require("../models/Setting");
 const CustomReply = require("../models/CustomReply");
 const fetch = require("node-fetch");
 
@@ -6,6 +8,26 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+// ----------------------
+// Cache (blocked IPs / settings)
+// ----------------------
+let blockedCache = { ts: 0, set: new Set() };
+const BLOCKED_CACHE_TTL_MS = 60_000;
+
+async function getBlockedSet() {
+  const now = Date.now();
+  if (now - blockedCache.ts < BLOCKED_CACHE_TTL_MS) return blockedCache.set;
+  const rows = await BlockedIP.find({ active: true }).select("ip").lean();
+  blockedCache = { ts: now, set: new Set(rows.map(r => r.ip)) };
+  return blockedCache.set;
+}
+
+async function getSetting(key, fallback) {
+  const row = await Setting.findOne({ key }).lean();
+  if (!row || row.value === undefined || row.value === null) return fallback;
+  return row.value;
+}
 
 // ----------------------
 // Anti-flood
@@ -162,6 +184,15 @@ exports.sendChat = async (req, res) => {
   try {
     const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || "unknown";
 
+    // Bloqueo por IP (lista negra en DB)
+    const blockedSet = await getBlockedSet();
+    if (blockedSet.has(ip)) {
+      return res.status(403).json({
+        type: "blocked",
+        reply: "Acceso restringido por políticas de seguridad. Si consideras que es un error, contacta al administrador.",
+      });
+    }
+
     // Anti-flood
     const flood = checkFlood(ip);
     if (flood.blocked) {
@@ -194,6 +225,25 @@ exports.sendChat = async (req, res) => {
       const botDoc = await Message.create({ role: "bot", text: custom, ip, source: "custom" });
       io?.emit("new_message", botDoc);
       return res.json({ reply: custom.reply, source: "custom", type: custom.type || "text", video_url: custom.video_url || custom.video_file || "" });
+    }
+
+
+    // Límite diario SOLO para consultas a IA (no aplica a respuestas personalizadas)
+    const today0 = new Date(); today0.setHours(0,0,0,0);
+    const aiLimit = parseInt(await getSetting("ai_daily_limit_per_ip", process.env.AI_DAILY_LIMIT_PER_IP || 20), 10);
+    if (aiLimit > 0) {
+      const aiUsed = await Message.countDocuments({
+        ip,
+        role: "bot",
+        source: { $in: ["gemini", "openai"] },
+        createdAt: { $gte: today0 }
+      });
+      if (aiUsed >= aiLimit) {
+        return res.status(429).json({
+          type: "limit",
+          reply: `Has alcanzado el límite diario de consultas automatizadas (${aiLimit}). Intenta mañana o contacta al administrador.`,
+        });
+      }
     }
 
     const messages = [

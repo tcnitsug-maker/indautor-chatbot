@@ -1093,3 +1093,149 @@ function escapeHtml(str="") {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
+
+// =============================
+// SEGURIDAD: IPs BLOQUEADAS + LÍMITE IA
+// =============================
+async function loadBlockedIPs() {
+  try {
+    if (!roleAtLeast("super")) return toast("Solo super puede ver IPs bloqueadas", "error");
+    const rows = await fetchJson(`${ADMIN_API}/blocked-ips`);
+    const tb = document.getElementById("blockedIPsTable");
+    if (!tb) return;
+
+    tb.innerHTML = rows.map(r => {
+      const estado = r.active ? "Bloqueada" : "Desbloqueada";
+      const when = r.updatedAt ? new Date(r.updatedAt).toLocaleString() : "";
+      const btn = r.active
+        ? `<button class="btn small" onclick="unblockIP('${r.ip}')">Desbloquear</button>`
+        : `<button class="btn small danger" onclick="blockIPQuick('${r.ip}')">Bloquear</button>`;
+      return `
+        <tr>
+          <td>${escapeHtml(r.ip)}</td>
+          <td><span class="badge ${r.active ? "bad" : "ok"}">${estado}</span></td>
+          <td>${escapeHtml(r.reason || "")}</td>
+          <td>${escapeHtml(when)}</td>
+          <td>${btn}</td>
+        </tr>
+      `;
+    }).join("");
+  } catch (e) {
+    console.error(e);
+    toast("Error cargando IPs bloqueadas", "error");
+  }
+}
+
+async function blockIP() {
+  try {
+    if (!roleAtLeast("super")) return toast("Solo super puede bloquear IPs", "error");
+    const ip = (document.getElementById("blockIpValue")?.value || "").trim();
+    const reason = (document.getElementById("blockIpReason")?.value || "").trim();
+    if (!ip) return toast("Escribe una IP", "error");
+
+    await fetchJson(`${ADMIN_API}/block-ip`, {
+      method: "POST",
+      body: JSON.stringify({ ip, reason })
+    });
+    toast("IP bloqueada", "ok");
+    document.getElementById("blockIpValue").value = "";
+    document.getElementById("blockIpReason").value = "";
+    loadBlockedIPs();
+  } catch (e) {
+    console.error(e);
+    toast("Error bloqueando IP", "error");
+  }
+}
+
+async function blockIPQuick(ip) {
+  try {
+    if (!roleAtLeast("super")) return;
+    await fetchJson(`${ADMIN_API}/block-ip`, {
+      method: "POST",
+      body: JSON.stringify({ ip, reason: "" })
+    });
+    toast("IP bloqueada", "ok");
+    loadBlockedIPs();
+  } catch (e) {
+    console.error(e);
+    toast("Error bloqueando IP", "error");
+  }
+}
+
+async function unblockIP(ip) {
+  try {
+    if (!roleAtLeast("super")) return toast("Solo super puede desbloquear IPs", "error");
+    await fetchJson(`${ADMIN_API}/unblock-ip`, {
+      method: "POST",
+      body: JSON.stringify({ ip })
+    });
+    toast("IP desbloqueada", "ok");
+    loadBlockedIPs();
+  } catch (e) {
+    console.error(e);
+    toast("Error desbloqueando IP", "error");
+  }
+}
+
+async function loadSettings() {
+  try {
+    if (!roleAtLeast("super")) return toast("Solo super puede ver settings", "error");
+    const s = await fetchJson(`${ADMIN_API}/settings`);
+    const v = s.ai_daily_limit_per_ip ?? "";
+    const el = document.getElementById("aiLimitPerIp");
+    if (el) el.value = v;
+    toast("Settings cargados", "ok");
+  } catch (e) {
+    console.error(e);
+    toast("Error cargando settings", "error");
+  }
+}
+
+async function saveAiLimit() {
+  try {
+    if (!roleAtLeast("super")) return toast("Solo super puede guardar settings", "error");
+    const v = parseInt(document.getElementById("aiLimitPerIp")?.value || "0", 10);
+    await fetchJson(`${ADMIN_API}/settings/ai-limit`, {
+      method: "PUT",
+      body: JSON.stringify({ ai_daily_limit_per_ip: v })
+    });
+    toast("Límite IA guardado", "ok");
+  } catch (e) {
+    console.error(e);
+    toast("Error guardando setting", "error");
+  }
+}
+
+async function exportBlockedIPsXLSX() {
+  try {
+    if (!roleAtLeast("super")) return toast("Solo super puede exportar", "error");
+    await downloadBlob(`${ADMIN_API}/blocked-ips/export-xlsx`, "ips_bloqueadas.xlsx");
+  } catch (e) {
+    console.error(e);
+    toast("Error exportando IPs", "error");
+  }
+}
+
+async function exportMetricsXLSX() {
+  try {
+    // exporta últimos 30 días
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 30);
+
+    const startStr = start.toISOString().slice(0,10);
+    const endStr = end.toISOString().slice(0,10);
+
+    await downloadBlob(`/metrics/export-xlsx?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`, "metricas.xlsx");
+  } catch (e) {
+    console.error(e);
+    toast("Error exportando métricas", "error");
+  }
+}
+
+function scrollToCreateUser() {
+  showTab("users");
+  const el = document.getElementById("newUserUsername") || document.getElementById("newUsername");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+}

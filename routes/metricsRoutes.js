@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const Message = require("../models/Message");
+const BlockedIP = require("../models/BlockedIP");
+const XLSX = require("xlsx");
 
 
 // ===============================
@@ -175,6 +177,16 @@ async function calcularMetricas(inicio, fin) {
     { $limit: 10 }
   ]);
 
+  const uniqueIPsArr = await Message.distinct("ip", { role: "user", createdAt: { $gte: inicio, $lte: fin } });
+
+  const blockedIPsActive = await BlockedIP.countDocuments({ active: true });
+
+  const porHora = await Message.aggregate([
+    { $match: { role: "user", createdAt: { $gte: inicio, $lte: fin } } },
+    { $group: { _id: { $hour: "$createdAt" }, count: { $sum: 1 } } },
+    { $sort: { _id: 1 } }
+  ]);
+
   const porDia = await Message.aggregate([
     { $match: { createdAt: { $gte: inicio, $lte: fin } } },
     {
@@ -193,8 +205,63 @@ async function calcularMetricas(inicio, fin) {
     iaPorcentaje: total ? (ia / total) * 100 : 0,
     customPorcentaje: total ? (custom / total) * 100 : 0,
     topPreguntas,
-    porDia
+    porDia,
+    uniqueIPs: uniqueIPsArr.length,
+    blockedIPsActive,
+    porHora
   };
 }
+
+
+// ===============================
+// EXPORTAR MÉTRICAS A EXCEL (XLSX)
+// ===============================
+router.get("/export-xlsx", async (req, res) => {
+  try {
+    const { start, end } = req.query;
+    if (!start || !end) return res.status(400).json({ error: "Faltan parámetros start y end" });
+
+    const startD = new Date(start);
+    const endD = new Date(end);
+
+    // generar filas por día (00:00 a 23:59)
+    const rows = [];
+    const cur = new Date(startD);
+    cur.setHours(0,0,0,0);
+
+    while (cur <= endD) {
+      const dayStart = new Date(cur);
+      const dayEnd = new Date(cur);
+      dayEnd.setHours(23,59,59,999);
+
+      const m = await calcularMetricas(dayStart, dayEnd);
+
+      rows.push({
+        Fecha: dayStart.toISOString().slice(0,10),
+        TotalMensajes: m.total,
+        RespuestasIA: m.ia,
+        RespuestasPersonalizadas: m.custom,
+        "%IA": Math.round(m.iaPorcentaje * 100) / 100,
+        "%Custom": Math.round(m.customPorcentaje * 100) / 100,
+        IPsUnicas: m.uniqueIPs,
+        IPsBloqueadasActivas: m.blockedIPsActive
+      });
+
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "Metricas");
+
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=metricas.xlsx");
+    res.send(buf);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error exportando métricas" });
+  }
+});
 
 module.exports = router;

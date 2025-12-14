@@ -1,7 +1,8 @@
-body{margin:0;font-family:Arial,sans-serif;background:#f4f6f9;color:#111}
+:root{--guinda:#7A0C2E;--dorado:#C9A24D;--bg:#f5f5f5;--text:#111;--card:#fff;--muted:#6b7280}
+body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:#111}
 
 /* ===== TOPBAR ===== */
-.topbar{position:sticky;top:0;z-index:50;background:linear-gradient(90deg,#003b86,#004aad);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;box-shadow:0 6px 20px rgba(0,0,0,.12)}
+.topbar{position:sticky;top:0;z-index:50;background:var(--guinda);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;box-shadow:0 6px 20px rgba(0,0,0,.12)}
 .brand{display:flex;align-items:baseline;gap:12px}
 .logo{font-weight:800;letter-spacing:.06em}
 .title{opacity:.95}
@@ -9,8 +10,8 @@ body{margin:0;font-family:Arial,sans-serif;background:#f4f6f9;color:#111}
 .who-user{font-weight:700}
 .who-role{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.25);color:#fff}
 
-#navbar{display:flex;flex-wrap:wrap;gap:8px;background:#0e2550;padding:10px 12px}
-#navbar button{flex:0 0 auto;padding:10px 12px;background:#15346c;border:none;color:#fff;cursor:pointer;font-size:14px;border-radius:12px}
+#navbar{background:var(--guinda);display:flex;flex-wrap:wrap;gap:8px;background:#0e2550;padding:10px 12px}
+#navbar button{color:#fff;flex:0 0 auto;padding:10px 12px;background:#15346c;border:none;color:#fff;cursor:pointer;font-size:14px;border-radius:12px}
 #navbar button:hover{filter:brightness(1.05)}
 #navbar button.active{background:#ffffff;color:#0e2550;font-weight:700}
 
@@ -86,7 +87,7 @@ button:hover {
 .textarea{min-height:120px;resize:vertical}
 .row{display:flex;gap:10px;align-items:center}
 .row>div{flex:1}
-.btn{border:1px solid #cfcfcf;background:#fafafa;padding:10px 12px;border-radius:10px;cursor:pointer}
+\.btn{border:1px solid #cfcfcf;background:var(--guinda);padding:10px 12px;border-radius:10px;cursor:pointer}
 .btn:hover{filter:brightness(.98)}
 .btn.primary{background:#004aad;color:#fff;border-color:#004aad}
 .btn.danger{background:#ffecec;border-color:#ffb9b9}
@@ -100,3 +101,6 @@ button:hover {
 .preview{background:#fafafa;border:1px dashed #d9d9d9;border-radius:12px;padding:12px;min-height:120px}
 .hint{margin-top:10px;color:#666;font-size:12px}
 .video-box.hidden{display:none}
+
+.btn.secondary{background:var(--dorado);color:#111}
+.btn.small{padding:6px 10px;font-size:12px}
