@@ -16,6 +16,12 @@ function parseJwt(token) {
 
 const adminInfo = parseJwt(token) || {};
 const ADMIN_ROLE = (adminInfo.role || "support").toLowerCase();
+const ADMIN_USERNAME = adminInfo.username || "";
+
+function logout() {
+  localStorage.removeItem("token");
+  location.href = "/admin-login.html";
+}
 
 // helpers permisos
 const ROLE_ORDER = ["support","analyst","editor","super"];
@@ -116,9 +122,17 @@ function setActiveTab(tabId) {
   if (tabId === "messages") loadGeneralHistory();
   if (tabId === "custom") loadCustomReplies();
   if (tabId === "videos") loadVideos();
+  if (tabId === "users") loadUsers();
+  if (tabId === "profile") loadProfile();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Header user info
+  const whoUser = document.getElementById("whoUser");
+  const whoRole = document.getElementById("whoRole");
+  if (whoUser) whoUser.textContent = ADMIN_USERNAME || "admin";
+  if (whoRole) whoRole.textContent = ADMIN_ROLE;
+
   document.querySelectorAll("#navbar button").forEach((btn) => {
     btn.addEventListener("click", () => setActiveTab(btn.getAttribute("data-tab")));
   });
@@ -736,6 +750,82 @@ async function deleteCustomById(id) {
 }
 
 // =============================
+// CUSTOM REPLIES: IMPORT/EXPORT
+// =============================
+async function downloadBlob(url, filename, mimeHint = "application/octet-stream") {
+  const r = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+  if (!r.ok) throw new Error(await r.text());
+  const blob = await r.blob();
+  const a = document.createElement("a");
+  const u = URL.createObjectURL(blob);
+  a.href = u;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 3000);
+}
+
+async function downloadCustomTemplate() {
+  try {
+    await downloadBlob(`${ADMIN_API}/custom-replies/template-xlsx`, "plantilla_respuestas.xlsx");
+  } catch (e) {
+    console.error(e);
+    toast("No se pudo descargar la plantilla", "error");
+  }
+}
+
+async function downloadCustomCSV() {
+  try {
+    await downloadBlob(`${ADMIN_API}/custom-replies/export-csv`, "respuestas_personalizadas.csv");
+  } catch (e) {
+    console.error(e);
+    toast("No se pudo descargar el CSV", "error");
+  }
+}
+
+async function downloadCustomPDF() {
+  try {
+    await downloadBlob(`${ADMIN_API}/custom-replies/export-pdf`, "respuestas_personalizadas.pdf");
+  } catch (e) {
+    console.error(e);
+    toast("No se pudo descargar el PDF", "error");
+  }
+}
+
+async function importCustomReplies() {
+  if (!roleAtLeast("editor")) {
+    toast("Sin permiso para importar. Pide rol editor/super.", "error");
+    document.getElementById("customImportFile").value = "";
+    return;
+  }
+  const input = document.getElementById("customImportFile");
+  const file = input?.files?.[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append("file", file);
+  try {
+    const r = await fetch(`${ADMIN_API}/custom-replies/import-excel`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token },
+      body: fd,
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Error importando");
+
+    const msg = `Importación lista: creadas ${data.created}, actualizadas ${data.updated}, omitidas ${data.skipped}.` +
+      (data.errors?.length ? ` Errores: ${data.errors.length}` : "");
+    toast(msg, data.errors?.length ? "error" : "success");
+    await loadCustomReplies();
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Error importando", "error");
+  } finally {
+    if (input) input.value = "";
+  }
+}
+
+// =============================
 // VIDEOS LIBRARY
 // =============================
 async function loadVideos(silent=false) {
@@ -831,6 +921,166 @@ async function deleteVideo(id) {
     await loadCustomReplies();
   } catch (e) {
     toast(e.message || "Error", "error");
+  }
+}
+
+// =============================
+// USERS (admin users)
+// =============================
+let usersCache = [];
+
+async function loadUsers() {
+  const tbl = document.getElementById("usersTable");
+  if (!tbl) return;
+
+  const hint = document.getElementById("usersPermHint");
+  const isSuper = roleAtLeast("super");
+  if (hint) hint.innerHTML = isSuper ? "" : "🔒 Solo rol <b>super</b> puede ver/editar usuarios.";
+
+  // Bloquear formulario si no es super
+  ["newUsername","newPassword","newRole","newUserActive"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !isSuper;
+  });
+  const btnCreate = document.querySelector("#users .btn.primary");
+  if (btnCreate) btnCreate.style.display = isSuper ? "inline-block" : "none";
+
+  if (!isSuper) {
+    tbl.innerHTML = "<tr><td colspan='6' class='hint'>Sin permisos.</td></tr>";
+    return;
+  }
+
+  try {
+    usersCache = await fetchJson(`${ADMIN_API}/users`);
+    renderUsersTable();
+  } catch (e) {
+    console.error(e);
+    toast("No se pudieron cargar usuarios", "error");
+  }
+}
+
+function renderUsersTable() {
+  const tbl = document.getElementById("usersTable");
+  if (!tbl) return;
+  tbl.innerHTML = "";
+  usersCache.forEach(u => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(u.username)}</td>
+      <td>
+        <select class="input" data-user-role="${u._id}" style="padding:8px;border-radius:10px;">
+          ${["support","analyst","editor","super"].map(r => `<option value="${r}" ${String(u.role).toLowerCase()===r?"selected":""}>${r}</option>`).join("")}
+        </select>
+      </td>
+      <td><span class="badge ${u.active?"":"off"}">${u.active?"ON":"OFF"}</span></td>
+      <td>${formatDate(u.createdAt)}</td>
+      <td>${formatDate(u.updatedAt)}</td>
+      <td style="white-space:nowrap;display:flex;gap:8px;">
+        <button class="btn" onclick="saveUser('${u._id}')">💾</button>
+        <button class="btn" onclick="toggleUserActive('${u._id}')">${u.active?"⛔":"✅"}</button>
+        <button class="btn danger" onclick="resetUserPasswordPrompt('${u._id}')">🔑</button>
+      </td>
+    `;
+    tbl.appendChild(tr);
+  });
+}
+
+async function createUser() {
+  try {
+    const username = document.getElementById("newUsername").value.trim();
+    const password = document.getElementById("newPassword").value;
+    const role = document.getElementById("newRole").value;
+    const active = document.getElementById("newUserActive").checked;
+    if (!username || !password) return toast("Falta usuario/contraseña", "error");
+
+    await fetchJson(`${ADMIN_API}/users`, {
+      method: "POST",
+      body: JSON.stringify({ username, password, role, active }),
+    });
+    toast("Usuario creado", "success");
+    document.getElementById("newUsername").value = "";
+    document.getElementById("newPassword").value = "";
+    await loadUsers();
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "No se pudo crear", "error");
+  }
+}
+
+async function saveUser(id) {
+  try {
+    const sel = document.querySelector(`[data-user-role="${id}"]`);
+    const role = sel?.value;
+    await fetchJson(`${ADMIN_API}/users/${id}`, { method: "PUT", body: JSON.stringify({ role }) });
+    toast("Usuario actualizado", "success");
+    await loadUsers();
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Error", "error");
+  }
+}
+
+async function toggleUserActive(id) {
+  const u = usersCache.find(x => x._id === id);
+  if (!u) return;
+  try {
+    await fetchJson(`${ADMIN_API}/users/${id}`, { method: "PUT", body: JSON.stringify({ active: !u.active }) });
+    toast("Estado actualizado", "success");
+    await loadUsers();
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Error", "error");
+  }
+}
+
+async function resetUserPasswordPrompt(id) {
+  const newPassword = prompt("Nueva contraseña (mínimo 6 caracteres):");
+  if (!newPassword) return;
+  try {
+    await fetchJson(`${ADMIN_API}/users/${id}/password`, { method: "PUT", body: JSON.stringify({ newPassword }) });
+    toast("Contraseña actualizada", "success");
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Error", "error");
+  }
+}
+
+// =============================
+// PROFILE
+// =============================
+async function loadProfile() {
+  const box = document.getElementById("profileBox");
+  if (!box) return;
+  try {
+    const u = await fetchJson(`${ADMIN_API}/profile`);
+    box.innerHTML = `
+      <div><b>Usuario:</b> ${escapeHtml(u.username)}</div>
+      <div><b>Rol:</b> ${escapeHtml(String(u.role||""))}</div>
+      <div><b>Activo:</b> ${u.active ? "Sí" : "No"}</div>
+      <div><b>Creado:</b> ${formatDate(u.createdAt)}</div>
+      <div><b>Actualizado:</b> ${formatDate(u.updatedAt)}</div>
+    `;
+  } catch (e) {
+    console.error(e);
+    box.textContent = "No se pudo cargar el perfil";
+  }
+}
+
+async function changeMyPassword() {
+  try {
+    const currentPassword = document.getElementById("myCurrentPassword").value;
+    const newPassword = document.getElementById("myNewPassword").value;
+    if (!currentPassword || !newPassword) return toast("Faltan datos", "error");
+    await fetchJson(`${ADMIN_API}/profile/password`, {
+      method: "PUT",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    toast("Contraseña cambiada", "success");
+    document.getElementById("myCurrentPassword").value = "";
+    document.getElementById("myNewPassword").value = "";
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "No se pudo cambiar", "error");
   }
 }
 

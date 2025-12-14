@@ -1,35 +1,18 @@
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f4f6f9;
-}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f9;color:#111}
 
-header {
-  background: #004aad;
-  color: white;
-  padding: 20px;
-  text-align: center;
-  font-size: 24px;
-}
+/* ===== TOPBAR ===== */
+.topbar{position:sticky;top:0;z-index:50;background:linear-gradient(90deg,#003b86,#004aad);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;box-shadow:0 6px 20px rgba(0,0,0,.12)}
+.brand{display:flex;align-items:baseline;gap:12px}
+.logo{font-weight:800;letter-spacing:.06em}
+.title{opacity:.95}
+.who{display:flex;align-items:center;gap:10px}
+.who-user{font-weight:700}
+.who-role{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.25);color:#fff}
 
-#navbar {
-  display: flex;
-  background: #002e6d;
-}
-
-#navbar button {
-  flex: 1;
-  padding: 15px;
-  background: #003b86;
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-#navbar button:hover {
-  background: #0051c9;
-}
+#navbar{display:flex;flex-wrap:wrap;gap:8px;background:#0e2550;padding:10px 12px}
+#navbar button{flex:0 0 auto;padding:10px 12px;background:#15346c;border:none;color:#fff;cursor:pointer;font-size:14px;border-radius:12px}
+#navbar button:hover{filter:brightness(1.05)}
+#navbar button.active{background:#ffffff;color:#0e2550;font-weight:700}
 
 .tab-content {
   display: none;
@@ -86,6 +69,10 @@ button {
 button:hover {
   background: #003b86;
 }
+
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 16px 0;flex-wrap:wrap}
+.toolbar-left,.toolbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.muted{color:#666;font-size:12px}
 
 
 /* ======= PRO UI additions ======= */

@@ -32,6 +32,8 @@ const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
 const VideoAsset = require("../models/VideoAsset");
 const { normalizeRole } = require("../middleware/authAdmin");
+const AdminUser = require("../models/AdminUser");
+const XLSX = require("xlsx");
 
 
 // =======================================================================
@@ -125,6 +127,273 @@ router.get("/custom-replies", requireRole("analyst"), async (req, res) => {
   } catch (err) {
     console.error("Error obteniendo custom replies:", err);
     res.status(500).json({ error: "No se pudieron obtener las respuestas personalizadas." });
+  }
+});
+
+// =======================================================================
+// 3.1 GET /admin/custom-replies/template-xlsx → Plantilla Excel
+//    Permisos: analyst+
+// =======================================================================
+router.get("/custom-replies/template-xlsx", requireRole("analyst"), async (req, res) => {
+  try {
+    const rows = [
+      {
+        trigger: "horario",
+        response: "Nuestro horario es de Lunes a Viernes de 9:00 a 17:00.",
+        keywords: "horario, atención, servicio",
+        enabled: 1,
+        priority: 10,
+        type: "text",
+        video_url: "",
+        video_file: "",
+        video_name: "",
+      },
+      {
+        trigger: "video informativo",
+        response: "Te comparto el video con la explicación.",
+        keywords: "video, tutorial",
+        enabled: 1,
+        priority: 5,
+        type: "video",
+        video_url: "https://www.youtube.com/embed/XXXX",
+        video_file: "",
+        video_name: "",
+      },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "replies");
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="plantilla_respuestas.xlsx"'
+    );
+    res.end(buf);
+  } catch (err) {
+    console.error("Error generando plantilla xlsx:", err);
+    res.status(500).json({ error: "No se pudo generar la plantilla." });
+  }
+});
+
+// =======================================================================
+// 3.2 POST /admin/custom-replies/import-excel → Import masivo desde Excel/CSV
+//    Permisos: editor+
+//    FormData: file
+// =======================================================================
+const excelUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
+
+router.post(
+  "/custom-replies/import-excel",
+  requireRole("editor"),
+  excelUpload.single("file"),
+  async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: "Falta archivo" });
+
+      const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+      const sheetName = wb.SheetNames[0];
+      if (!sheetName) return res.status(400).json({ error: "Archivo sin hojas" });
+      const ws = wb.Sheets[sheetName];
+
+      // Normalizar cabeceras: trigger/response/keywords/enabled/priority/type/video_url/video_file/video_name
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
+      const errors = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const raw = rows[i] || {};
+        // aceptar variantes de columnas
+        const trigger = String(raw.trigger || raw.question || raw.pregunta || "").trim();
+        const response = String(raw.response || raw.answer || raw.respuesta || "").trim();
+        if (!trigger || !response) {
+          skipped++;
+          continue;
+        }
+
+        const keywordsRaw = raw.keywords ?? raw.palabras_clave ?? raw.tags ?? "";
+        const keywords = String(keywordsRaw)
+          .split(/[,|]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        const enabledVal = raw.enabled ?? raw.activo ?? 1;
+        const enabled = String(enabledVal).trim() === "0" ? false : !!enabledVal;
+
+        const priority = Number(raw.priority ?? raw.prioridad ?? 1) || 1;
+        const typeRaw = String(raw.type ?? raw.tipo ?? "text").toLowerCase();
+        const type = typeRaw === "video" ? "video" : "text";
+
+        const video_url = String(raw.video_url ?? raw.videoUrl ?? raw.url_video ?? "").trim();
+        const video_file = String(raw.video_file ?? raw.videoFile ?? raw.archivo_video ?? "").trim();
+        const video_name = String(raw.video_name ?? raw.videoName ?? raw.nombre_video ?? "").trim();
+
+        try {
+          const existing = await CustomReply.findOne({ trigger }).lean();
+          if (existing) {
+            await CustomReply.updateOne(
+              { _id: existing._id },
+              {
+                $set: {
+                  trigger,
+                  response,
+                  question: trigger,
+                  answer: response,
+                  keywords,
+                  enabled,
+                  priority,
+                  type,
+                  video_url,
+                  video_file,
+                  video_name,
+                },
+              }
+            );
+            updated++;
+          } else {
+            await CustomReply.create({
+              trigger,
+              response,
+              question: trigger,
+              answer: response,
+              keywords,
+              enabled,
+              priority,
+              type,
+              video_url,
+              video_file,
+              video_name,
+            });
+            created++;
+          }
+        } catch (e) {
+          errors.push({ row: i + 2, trigger, error: e.message });
+        }
+      }
+
+      res.json({ ok: true, created, updated, skipped, errors });
+    } catch (err) {
+      console.error("Error importando excel:", err);
+      res.status(500).json({ error: "No se pudo importar el archivo." });
+    }
+  }
+);
+
+// =======================================================================
+// 3.3 GET /admin/profile → Perfil del usuario actual
+// =======================================================================
+router.get("/profile", async (req, res) => {
+  try {
+    const u = await AdminUser.findById(req.admin.id).select("username role active createdAt updatedAt").lean();
+    if (!u) return res.status(404).json({ error: "Usuario no encontrado" });
+    res.json(u);
+  } catch (err) {
+    console.error("Error profile:", err);
+    res.status(500).json({ error: "No se pudo cargar el perfil" });
+  }
+});
+
+// =======================================================================
+// 3.4 PUT /admin/profile/password → Cambiar password (usuario actual)
+// =======================================================================
+router.put("/profile/password", async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: "Faltan datos" });
+    if (String(newPassword).length < 6) return res.status(400).json({ error: "La nueva contraseña es muy corta" });
+
+    const user = await AdminUser.findById(req.admin.id);
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+    const ok = await user.comparePassword(currentPassword);
+    if (!ok) return res.status(401).json({ error: "Contraseña actual incorrecta" });
+
+    user.password = newPassword;
+    await user.save();
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error change password:", err);
+    res.status(500).json({ error: "No se pudo cambiar la contraseña" });
+  }
+});
+
+// =======================================================================
+// 3.5 Usuarios admin (gestión)
+//    - GET /admin/users (super)
+//    - POST /admin/users (super)
+//    - PUT /admin/users/:id (super)
+//    - PUT /admin/users/:id/password (super)
+// =======================================================================
+router.get("/users", requireRole("super"), async (req, res) => {
+  try {
+    const users = await AdminUser.find().select("username role active createdAt updatedAt").sort({ createdAt: -1 }).lean();
+    res.json(users);
+  } catch (err) {
+    console.error("Error users list:", err);
+    res.status(500).json({ error: "No se pudo listar usuarios" });
+  }
+});
+
+router.post("/users", requireRole("super"), async (req, res) => {
+  try {
+    const { username, password, role = "viewer", active = true } = req.body || {};
+    if (!username || !password) return res.status(400).json({ error: "Faltan username o password" });
+    if (String(password).length < 6) return res.status(400).json({ error: "Password muy corta" });
+
+    const exists = await AdminUser.findOne({ username }).lean();
+    if (exists) return res.status(409).json({ error: "Ese usuario ya existe" });
+
+    const u = await AdminUser.create({ username, password, role, active: !!active });
+    res.json({ ok: true, id: u._id });
+  } catch (err) {
+    console.error("Error users create:", err);
+    res.status(500).json({ error: "No se pudo crear usuario" });
+  }
+});
+
+router.put("/users/:id", requireRole("super"), async (req, res) => {
+  try {
+    const { role, active } = req.body || {};
+    const update = {};
+    if (role) update.role = role;
+    if (typeof active === "boolean") update.active = active;
+
+    const u = await AdminUser.findByIdAndUpdate(req.params.id, update, { new: true })
+      .select("username role active createdAt updatedAt")
+      .lean();
+    if (!u) return res.status(404).json({ error: "Usuario no encontrado" });
+    res.json({ ok: true, user: u });
+  } catch (err) {
+    console.error("Error users update:", err);
+    res.status(500).json({ error: "No se pudo actualizar usuario" });
+  }
+});
+
+router.put("/users/:id/password", requireRole("super"), async (req, res) => {
+  try {
+    const { newPassword } = req.body || {};
+    if (!newPassword) return res.status(400).json({ error: "Falta newPassword" });
+    if (String(newPassword).length < 6) return res.status(400).json({ error: "Password muy corta" });
+
+    const user = await AdminUser.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+    user.password = newPassword;
+    await user.save();
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error users reset password:", err);
+    res.status(500).json({ error: "No se pudo cambiar password" });
   }
 });
 

@@ -16,8 +16,16 @@
 </head>
 <body>
 
-<header>
-  <h1>📊 Panel Administrativo INDARELÍN</h1>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">INDARELÍN</div>
+    <div class="title">Panel Administrativo</div>
+  </div>
+  <div class="who">
+    <span id="whoUser" class="who-user">—</span>
+    <span id="whoRole" class="who-role badge">—</span>
+    <button class="btn" onclick="logout()">Salir</button>
+  </div>
 </header>
 
 <div id="navbar">
@@ -27,6 +35,8 @@
   <button data-tab="messages">💬 Historial General</button>
   <button data-tab="custom">🧠 Respuestas</button>
   <button data-tab="videos">🎥 Videos</button>
+  <button data-tab="users">👤 Usuarios</button>
+  <button data-tab="profile">⚙️ Mi perfil</button>
 </div>
 
 <main>
@@ -100,6 +110,21 @@
   
 <section id="custom" class="tab-content">
   <h2>🧠 Respuestas Personalizadas</h2>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="btn" onclick="downloadCustomTemplate()">⬇️ Plantilla Excel</button>
+      <label class="btn" style="cursor:pointer;">
+        📤 Importar Excel/CSV
+        <input id="customImportFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importCustomReplies()" />
+      </label>
+      <span class="muted">(Se crea/actualiza por trigger)</span>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn" onclick="downloadCustomCSV()">⬇️ Exportar CSV</button>
+      <button class="btn" onclick="downloadCustomPDF()">⬇️ Exportar PDF</button>
+    </div>
+  </div>
 
   <div class="grid-2">
     <div class="panel">
@@ -194,6 +219,88 @@
     </div>
   </div>
 </section>
+
+  <!-- USERS (ADMIN USERS) -->
+  <section id="users" class="tab-content">
+    <h2>👤 Usuarios (Administradores)</h2>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Lista de usuarios</h3>
+          <button class="btn" onclick="loadUsers()">🔄 Recargar</button>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Rol</th>
+              <th>Activo</th>
+              <th>Creado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="usersTable"></tbody>
+        </table>
+        <div class="hint" id="usersPermHint"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Crear usuario</h3>
+        </div>
+        <div class="form">
+          <label>Usuario</label>
+          <input id="newUserUsername" class="input" placeholder="ej: soporte1" />
+          <label>Contraseña</label>
+          <input id="newUserPassword" class="input" type="password" placeholder="mínimo 6" />
+          <div class="row">
+            <div>
+              <label>Rol</label>
+              <select id="newUserRole" class="input">
+                <option value="support">support (básico)</option>
+                <option value="analyst">analyst (lectura)</option>
+                <option value="editor">editor (edita respuestas)</option>
+                <option value="super">super (todo)</option>
+              </select>
+            </div>
+            <div class="switch">
+              <label><input type="checkbox" id="newUserActive" checked /> Activo</label>
+            </div>
+          </div>
+          <button class="btn primary" onclick="createUser()">➕ Crear</button>
+          <div class="hint">* Solo rol <b>super</b> puede administrar usuarios.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROFILE -->
+  <section id="profile" class="tab-content">
+    <h2>⚙️ Mi perfil</h2>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Datos</h3>
+          <button class="btn" onclick="loadProfile()">🔄 Recargar</button>
+        </div>
+        <div class="hint" id="profileBox">—</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Cambiar contraseña</h3>
+        </div>
+        <div class="form">
+          <label>Contraseña actual</label>
+          <input id="myCurrentPassword" class="input" type="password" />
+          <label>Nueva contraseña</label>
+          <input id="myNewPassword" class="input" type="password" />
+          <button class="btn primary" onclick="changeMyPassword()">Guardar</button>
+          <div class="hint">* Mínimo 6 caracteres.</div>
+        </div>
+      </div>
+    </div>
+  </section>
 
 
 
