@@ -11,29 +11,15 @@ async function createAdmin() {
     process.exit();
   }
 
-  const admin = await AdminUser.create({
+  await AdminUser.create({
     username: "admin",
     password: "12345",
     role: "superadmin",
     active: true,
   });
 
-  console.log("✅ Admin creado:", admin.username);
+  console.log("✅ Admin del PANEL creado");
   process.exit();
-}
-
-createAdmin();
-
-    console.log("🎉 ADMIN CREADO CON ÉXITO");
-    console.log("Usuario:", username);
-    console.log("Password:", password);
-    console.log("Rol:", role);
-
-    process.exit(0);
-  } catch (err) {
-    console.error("❌ Error creando admin:", err);
-    process.exit(1);
-  }
 }
 
 createAdmin();
