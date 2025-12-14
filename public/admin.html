@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Panel Administrativo INDARELÍN</title>
+
+<link rel="stylesheet" href="admin.css" />
+
+<!-- LEAFLET MAP -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+<!-- CHART JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+<body>
+
+<header>
+  <h1>📊 Panel Administrativo INDARELÍN</h1>
+</header>
+
+<div id="navbar">
+  <button data-tab="dashboard">📈 Dashboard</button>
+  <button data-tab="ips">🌍 IPs & Geolocalización</button>
+  <button data-tab="ipHistory">📜 Historial por IP</button>
+  <button data-tab="messages">💬 Historial General</button>
+  <button data-tab="custom">🧠 Respuestas Personalizadas</button>
+</div>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <section id="dashboard" class="tab-content active">
+    <h2>📊 Dashboard General</h2>
+
+    <div class="cards">
+
+      <div class="card">
+        <h3>Total Mensajes</h3>
+        <p id="totalMessages">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Total IPs Únicas</h3>
+        <p id="totalIPs">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Consultas Hoy</h3>
+        <p id="todayMessages">0</p>
+      </div>
+
+    </div>
+
+    <canvas id="trafficChart"></canvas>
+  </section>
+
+  <!-- IP LIST -->
+  <section id="ips" class="tab-content">
+    <h2>🌍 IPs Conectadas</h2>
+    <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>IP</th>
+          <th>Mensajes</th>
+          <th>Última vez</th>
+          <th>Ciudad</th>
+          <th>País</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="ipTable"></tbody>
+    </table>
+  </section>
+
+  <!-- IP HISTORY -->
+  <section id="ipHistory" class="tab-content">
+    <h2>📜 Historial por IP</h2>
+    <input type="text" placeholder="Escribe IP..." id="ipSearch" />
+    <button onclick="loadIPHistory()">Buscar</button>
+    <div id="ipHistoryBox"></div>
+  </section>
+
+  <!-- ORIGINAL MESSAGE HISTORY -->
+  <section id="messages" class="tab-content">
+    <h2>💬 Historial General</h2>
+    <table>
+      <thead>
+        <tr><th>Rol</th><th>Mensaje</th><th>Fecha</th></tr>
+      </thead>
+      <tbody id="generalHistory"></tbody>
+    </table>
+  </section>
+
+  <!-- CUSTOM REPLIES (OLD PANEL) -->
+  <section id="custom" class="tab-content">
+    <h2>🧠 Respuestas Personalizadas</h2>
+
+    <div class="card">
+      <input id="qInput" placeholder="Pregunta" />
+      <textarea id="aInput" placeholder="Respuesta"></textarea>
+      <input id="kInput" placeholder="Palabras clave (coma separadas)" />
+      <button onclick="addCustom()">Agregar</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Pregunta</th><th>Respuesta</th><th>Keywords</th><th>Eliminar</th></tr>
+      </thead>
+      <tbody id="customTable"></tbody>
+    </table>
+  </section>
+
+</main>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="admin.js"></script>
+
+</body>
+</html>
