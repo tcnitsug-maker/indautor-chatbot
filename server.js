@@ -12,6 +12,7 @@ import path from "path";
 import http from "http";
 import jwt from "jsonwebtoken";
 import { fileURLToPath } from "url";
+import { Server } from "socket.io";
 
 // =====================
 // __dirname en ES Modules
@@ -28,7 +29,6 @@ const server = http.createServer(app);
 // =====================
 // SOCKET.IO
 // =====================
-import { Server } from "socket.io";
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
@@ -54,8 +54,13 @@ app.use(express.static(path.join(__dirname, "public")));
 // =====================
 // MONGODB
 // =====================
+if (!process.env.MONGODB_URI) {
+  console.error("❌ Falta MONGODB_URI");
+  process.exit(1);
+}
+
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ MongoDB conectado"))
   .catch((e) => {
     console.error("❌ MongoDB error:", e.message);
