@@ -2,13 +2,14 @@ const jwt = require("jsonwebtoken");
 
 module.exports = function authAdmin(requiredRole = "viewer") {
   return (req, res, next) => {
-    try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader) {
-        return res.status(401).json({ error: "No autorizado" });
-      }
+    const auth = req.headers.authorization;
+    if (!auth) {
+      return res.status(401).json({ error: "No autorizado" });
+    }
 
-      const token = authHeader.replace("Bearer ", "");
+    const token = auth.replace("Bearer ", "");
+
+    try {
       const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
 
       const roles = ["viewer", "admin", "superadmin"];
