@@ -1,43 +1,28 @@
+// routes/adminAuthRoutes.js
 const express = require("express");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const AdminUser = require("../models/AdminUser");
 
-// ================================
+// ===============================
 // POST /admin-auth/login
-// ================================
+// ===============================
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({
-        error: "Usuario y contraseña requeridos",
-      });
+      return res.status(400).json({ error: "Faltan credenciales" });
     }
 
-    const user = await AdminUser.findOne({
-      username,
-      active: true,
-    });
-
+    const user = await AdminUser.findOne({ username, active: true });
     if (!user) {
-      return res.status(401).json({
-        error: "Credenciales inválidas",
-      });
+      return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
-    const valid = await user.comparePassword(password);
-    if (!valid) {
-      return res.status(401).json({
-        error: "Credenciales inválidas",
-      });
-    }
-
-    if (!process.env.ADMIN_JWT_SECRET) {
-      return res.status(500).json({
-        error: "ADMIN_JWT_SECRET no configurado",
-      });
+    const ok = await user.comparePassword(password);
+    if (!ok) {
+      return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
     const token = jwt.sign(
@@ -53,17 +38,12 @@ router.post("/login", async (req, res) => {
     res.json({
       ok: true,
       token,
-      user: {
-        id: user._id,
-        username: user.username,
-        role: user.role,
-      },
+      role: user.role,
+      username: user.username,
     });
   } catch (err) {
     console.error("Error en login admin:", err);
-    res.status(500).json({
-      error: "Error interno al iniciar sesión",
-    });
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 });
 
