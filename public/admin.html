@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-<button onclick="logout()">Cerrar sesión</button>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -13,51 +12,22 @@
 
 <!-- CHART JS -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- 🔐 PROTECCIÓN DEL PANEL -->
 <script>
 const token = localStorage.getItem("admin_token");
-
-// ❌ Si no hay token → regresar a login
 if (!token) {
   window.location.replace("/admin-login.html");
 }
 </script>
-  const API_BASE = "";
 
-function authHeaders() {
-  const token = localStorage.getItem("admin_token");
-  return {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer " + token
-  };
-}
-
-// Ejemplo: cargar mensajes
-async function loadMessages() {
-  const res = await fetch("/admin/messages", {
-    headers: authHeaders()
-  });
-
-  if (res.status === 401 || res.status === 403) {
-    logout();
-    return;
-  }
-
-  const data = await res.json();
-  console.log(data);
-}
-
-// Logout
-function logout() {
-  localStorage.removeItem("admin_token");
-  localStorage.removeItem("admin_user");
-  localStorage.removeItem("admin_role");
-  window.location.href = "/admin-login.html";
-}
 </head>
 <body>
 
 <header>
   <h1>📊 Panel Administrativo INDARELÍN</h1>
+  <p id="adminInfo" style="font-size:14px; opacity:0.8;"></p>
+  <button onclick="logout()" style="float:right;">🚪 Cerrar sesión</button>
 </header>
 
 <div id="navbar">
@@ -75,7 +45,6 @@ function logout() {
     <h2>📊 Dashboard General</h2>
 
     <div class="cards">
-
       <div class="card">
         <h3>Total Mensajes</h3>
         <p id="totalMessages">0</p>
@@ -90,7 +59,6 @@ function logout() {
         <h3>Consultas Hoy</h3>
         <p id="todayMessages">0</p>
       </div>
-
     </div>
 
     <canvas id="trafficChart"></canvas>
@@ -135,7 +103,7 @@ function logout() {
     </table>
   </section>
 
-  <!-- CUSTOM REPLIES (OLD PANEL) -->
+  <!-- CUSTOM REPLIES -->
   <section id="custom" class="tab-content">
     <h2>🧠 Respuestas Personalizadas</h2>
 
@@ -156,8 +124,24 @@ function logout() {
 
 </main>
 
+<!-- LIBRERÍAS -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- TU JS -->
 <script src="admin.js"></script>
 
-</body>
-</html>
+<!-- INFO ADMIN + LOGOUT -->
+<script>
+const username = localStorage.getItem("admin_user");
+const role = localStorage.getItem("admin_role");
+
+if (username && role) {
+  document.getElementById("adminInfo").innerText =
+    `Usuario: ${username} | Rol: ${role}`;
+}
+
+function logout() {
+  localStorage.removeItem("admin_token");
+  localStorage.removeItem("admin_user");
+  localStorage.removeItem("admin_role");
+  window.loc
