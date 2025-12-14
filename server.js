@@ -49,6 +49,16 @@ app.use(
   "/admin-panel",
   express.static(path.join(__dirname, "public", "admin"))
 );
+// =====================
+// ADMIN PANEL ENTRYPOINT
+// =====================
+app.get("/admin-panel", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
+});
+
+app.get("/admin-panel/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
+});
 
 // =====================
 // MONGODB
