@@ -14,25 +14,33 @@
   <button onclick="login()">Entrar</button>
 
   <script>
-    async function login() {
-      const res = await fetch("/admin-auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: user.value,
-          password: pass.value,
-        }),
-      });
+   async function login() {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
 
-      const data = await res.json();
+  const res = await fetch("/admin-auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password })
+  });
 
-      if (data.token) {
-        localStorage.token = data.token;
-        location.href = "/admin.html";
-      } else {
-        alert(data.error || "Error de login");
-      }
-    }
-  </script>
+  const data = await res.json();
+
+  if (!res.ok || !data.token) {
+    document.getElementById("error").innerText =
+      data.error || "Error de login";
+    return;
+  }
+
+  // ✅ Guardar token
+  localStorage.setItem("admin_token", data.token);
+  localStorage.setItem("admin_user", data.username);
+  localStorage.setItem("admin_role", data.role);
+
+  // 👉 Ir al panel
+  window.location.href = "/admin.html";
+}
+</script>
+
 </body>
 </html>
