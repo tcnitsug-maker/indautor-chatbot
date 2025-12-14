@@ -53,6 +53,7 @@ app.get("/admin.html", (req, res) => {
 // AUTH ADMIN
 // =====================
 app.use("/admin-auth", require("./routes/adminAuthRoutes"));
+app.use("/setup", require("./routes/setupRoutes"));
 
 // =====================
 // RUTAS PROTEGIDAS ADMIN
