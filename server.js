@@ -9,22 +9,25 @@ require("dotenv").config();
 const app = express();
 const server = http.createServer(app);
 
+// =====================
 // SOCKET.IO
+// =====================
 const { Server } = require("socket.io");
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
-
-// Hacemos io global para controllers
 app.locals.io = io;
 
+// =====================
+// CONFIG
+// =====================
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ ESTÁTICOS (CORRECTO PARA RENDER)
+// 🔴 CAMBIO CRÍTICO AQUÍ
 app.use(express.static(path.join(__dirname, "public")));
 
 // =====================
@@ -36,26 +39,41 @@ mongoose
   .catch((e) => console.error("❌ MongoDB error:", e));
 
 // =====================
-// Rutas públicas
+// RUTAS PÚBLICAS HTML (EXPLÍCITAS)
+// =====================
+app.get("/admin-login.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin-login.html"));
+});
+
+app.get("/admin.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+
+// =====================
+// AUTH ADMIN
 // =====================
 app.use("/admin-auth", require("./routes/adminAuthRoutes"));
 
 // =====================
-// Middleware admin
+// RUTAS PROTEGIDAS ADMIN
 // =====================
 const authAdmin = require("./middleware/authAdmin");
-
-// Rutas protegidas
 app.use("/admin", authAdmin("viewer"), require("./routes/adminRoutes"));
 
-// Chat
+// =====================
+// CHAT
+// =====================
 app.post("/chat", require("./controllers/chatController").sendChat);
 
+// =====================
 // HOME
-app.get("/", (req, res) => res.send("✔ INDARELÍN API OK"));
+// =====================
+app.get("/", (req, res) => {
+  res.send("✔ INDARELÍN API OK");
+});
 
 // =====================
-// SOCKET AUTH (Admin)
+// SOCKET AUTH
 // =====================
 io.use((socket, next) => {
   try {
@@ -63,7 +81,6 @@ io.use((socket, next) => {
     if (!token) return next(new Error("NO_TOKEN"));
 
     const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
-
     const roles = ["viewer", "admin", "superadmin"];
     if (!roles.includes(decoded.role)) return next(new Error("BAD_ROLE"));
 
@@ -75,15 +92,12 @@ io.use((socket, next) => {
 });
 
 io.on("connection", (socket) => {
-  console.log("🟢 Admin conectado:", socket.admin.username);
-  socket.on("disconnect", () => {
-    console.log("🔴 Admin desconectado:", socket.admin.username);
-  });
+  console.log("🟢 Admin conectado:", socket.admin?.username);
 });
 
 // =====================
 // START
 // =====================
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor listo en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor listo en puerto ${PORT}`);
 });
