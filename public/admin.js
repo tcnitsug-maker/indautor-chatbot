@@ -1,37 +1,27 @@
+// =============================
+// AUTH (obligatorio)
+// =============================
 const token = localStorage.token;
 if (!token) location.href = "/admin-login.html";
 
-function fetchJson(url, options = {}) {
-  options.headers = {
-    ...(options.headers || {}),
-    Authorization: "Bearer " + token,
-  };
-  return fetch(url, options).then((r) => {
-    if (!r.ok) throw new Error("Error");
-    return r.json();
-  });
-}
 // =============================
-// CONFIGURACIÓN BÁSICA
+// CONFIG
 // =============================
-
-// Usamos rutas relativas para que funcione en Render, local, etc.
 const ADMIN_API = "/admin";
 const CUSTOM_URL = `${ADMIN_API}/custom-replies`;
 
-// Referencias globales
 let trafficChart = null;
+let topIpChart = null;
+
 let map = null;
 let mapMarkers = [];
 
 // =============================
-// UTILIDADES
+// UTIL
 // =============================
-
 function formatDate(iso) {
   if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleString();
+  return new Date(iso).toLocaleString();
 }
 
 function escapeHtml(text) {
@@ -44,6 +34,12 @@ function escapeHtml(text) {
 }
 
 async function fetchJson(url, options = {}) {
+  options.headers = {
+    ...(options.headers || {}),
+    "Content-Type": options.body ? "application/json" : (options.headers || {})["Content-Type"],
+    Authorization: "Bearer " + token,
+  };
+
   const res = await fetch(url, options);
   if (!res.ok) {
     const txt = await res.text();
@@ -53,49 +49,65 @@ async function fetchJson(url, options = {}) {
 }
 
 // =============================
-// TABS / NAVEGACIÓN
+// TOASTS (notificaciones)
 // =============================
+function ensureToastRoot() {
+  if (document.getElementById("toastRoot")) return;
+  const div = document.createElement("div");
+  div.id = "toastRoot";
+  div.style.position = "fixed";
+  div.style.right = "16px";
+  div.style.bottom = "16px";
+  div.style.zIndex = 99999;
+  div.style.display = "flex";
+  div.style.flexDirection = "column";
+  div.style.gap = "10px";
+  document.body.appendChild(div);
+}
 
+function toast(msg, type = "info") {
+  ensureToastRoot();
+  const root = document.getElementById("toastRoot");
+  const t = document.createElement("div");
+  t.style.background = type === "error" ? "#ffdddd" : type === "success" ? "#ddffdd" : "#ffffff";
+  t.style.border = "1px solid #ccc";
+  t.style.borderRadius = "10px";
+  t.style.padding = "10px 12px";
+  t.style.boxShadow = "0 2px 10px rgba(0,0,0,.2)";
+  t.style.maxWidth = "320px";
+  t.innerHTML = `<div style="font-weight:700;margin-bottom:4px;">${type.toUpperCase()}</div>
+                 <div style="font-size:14px;">${escapeHtml(msg)}</div>`;
+  root.appendChild(t);
+  setTimeout(() => t.remove(), 5000);
+}
+
+// =============================
+// TABS
+// =============================
 function setActiveTab(tabId) {
   document.querySelectorAll(".tab-content").forEach((sec) => {
     sec.classList.toggle("active", sec.id === tabId);
   });
-
   document.querySelectorAll("#navbar button").forEach((btn) => {
     btn.classList.toggle("active", btn.getAttribute("data-tab") === tabId);
   });
 
-  // Cargar datos según la pestaña
-  if (tabId === "dashboard") {
-    loadDashboard();
-  } else if (tabId === "ips") {
-    loadIPs();
-  } else if (tabId === "ipHistory") {
-    // no cargamos nada automático; se carga al buscar
-  } else if (tabId === "messages") {
-    loadGeneralHistory();
-  } else if (tabId === "custom") {
-    loadCustomReplies();
-  }
+  if (tabId === "dashboard") loadDashboard();
+  if (tabId === "ips") loadIPs();
+  if (tabId === "messages") loadGeneralHistory();
+  if (tabId === "custom") loadCustomReplies();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Evento de botones de navbar
   document.querySelectorAll("#navbar button").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const tabId = btn.getAttribute("data-tab");
-      setActiveTab(tabId);
-    });
+    btn.addEventListener("click", () => setActiveTab(btn.getAttribute("data-tab")));
   });
-
-  // Activar dashboard por defecto
   setActiveTab("dashboard");
 });
 
 // =============================
-// DASHBOARD GENERAL
+// DASHBOARD
 // =============================
-
 async function loadDashboard() {
   try {
     const [messages, ips] = await Promise.all([
@@ -103,26 +115,14 @@ async function loadDashboard() {
       fetchJson(`${ADMIN_API}/ips`),
     ]);
 
-    // Total de mensajes
-    const totalMessages = messages.length;
-    document.getElementById("totalMessages").textContent = totalMessages;
+    document.getElementById("totalMessages").textContent = messages.length;
+    document.getElementById("totalIPs").textContent = ips.length;
 
-    // Total de IPs únicas
-    const totalIPs = ips.length;
-    document.getElementById("totalIPs").textContent = totalIPs;
-
-    // Mensajes de hoy
-    const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
-    const todayMessages = messages.filter((m) => {
-      if (!m.createdAt) return false;
-      const d = new Date(m.createdAt);
-      const dStr = d.toISOString().slice(0, 10);
-      return dStr === todayStr;
-    }).length;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayMessages = messages.filter((m) => (m.createdAt || "").slice(0, 10) === todayStr).length;
     document.getElementById("todayMessages").textContent = todayMessages;
 
-    // Construir datos de los últimos 7 días
+    // Mensajes por día (7 días)
     const days = [];
     const counts = [];
     for (let i = 6; i >= 0; i--) {
@@ -130,57 +130,58 @@ async function loadDashboard() {
       dt.setDate(dt.getDate() - i);
       const label = dt.toLocaleDateString();
       const isoDay = dt.toISOString().slice(0, 10);
-      const count = messages.filter((m) => {
-        if (!m.createdAt) return false;
-        const d = new Date(m.createdAt);
-        return d.toISOString().slice(0, 10) === isoDay;
-      }).length;
+      const count = messages.filter((m) => (m.createdAt || "").slice(0, 10) === isoDay).length;
       days.push(label);
       counts.push(count);
     }
 
-    // Dibujar gráfico
     const ctx = document.getElementById("trafficChart").getContext("2d");
-    if (trafficChart) {
-      trafficChart.destroy();
-    }
+    if (trafficChart) trafficChart.destroy();
     trafficChart = new Chart(ctx, {
       type: "line",
       data: {
         labels: days,
-        datasets: [
-          {
-            label: "Mensajes por día (últimos 7 días)",
-            data: counts,
-            borderWidth: 2,
-            fill: false,
-          },
-        ],
+        datasets: [{ label: "Mensajes (7 días)", data: counts, borderWidth: 2, fill: false }],
       },
-      options: {
-        responsive: true,
-        scales: {
-          y: {
-            beginAtZero: true,
-            precision: 0,
-          },
-        },
-      },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } },
     });
+
+    // Top IPs (opcional si ya lo tienes)
+    try {
+      const topIps = await fetchJson(`${ADMIN_API}/stats/top-ips`);
+      const labels = topIps.map((x) => x._id);
+      const vals = topIps.map((x) => x.total);
+
+      const canvasId = "topIpChart";
+      if (!document.getElementById(canvasId)) {
+        const c = document.createElement("canvas");
+        c.id = canvasId;
+        c.style.marginTop = "20px";
+        document.getElementById("dashboard").appendChild(c);
+      }
+
+      const ctx2 = document.getElementById(canvasId).getContext("2d");
+      if (topIpChart) topIpChart.destroy();
+      topIpChart = new Chart(ctx2, {
+        type: "bar",
+        data: { labels, datasets: [{ label: "Top IPs", data: vals, borderWidth: 1 }] },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } },
+      });
+    } catch {
+      // si no existe /stats/top-ips no rompe
+    }
   } catch (err) {
-    console.error("Error en dashboard:", err);
-    alert("Error cargando datos del dashboard");
+    console.error(err);
+    toast("Error cargando datos del dashboard", "error");
   }
 }
 
 // =============================
-// MAPA + LISTADO DE IPs
+// MAPA + IPs
 // =============================
-
 function initMap() {
-  if (map) return; // ya creado
-  map = L.map("map").setView([20, -100], 3); // centro aproximado
-
+  if (map) return;
+  map = L.map("map").setView([20, -100], 3);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
     attribution: "© OpenStreetMap contributors",
@@ -188,7 +189,6 @@ function initMap() {
 }
 
 function clearMapMarkers() {
-  if (!mapMarkers) return;
   mapMarkers.forEach((m) => m.remove());
   mapMarkers = [];
 }
@@ -202,9 +202,9 @@ async function loadIPs() {
     const tbody = document.getElementById("ipTable");
     tbody.innerHTML = "";
 
-    // Para cada IP, además de mostrarla, consultamos info geográfica
     for (const item of ips) {
       const tr = document.createElement("tr");
+      if (item.spam) tr.style.background = "#ffdddd";
 
       const tdIp = document.createElement("td");
       tdIp.textContent = item.ip;
@@ -222,6 +222,7 @@ async function loadIPs() {
       tdCountry.textContent = "...";
 
       const tdActions = document.createElement("td");
+
       const btnHist = document.createElement("button");
       btnHist.textContent = "📜 Historial";
       btnHist.onclick = () => {
@@ -229,6 +230,7 @@ async function loadIPs() {
         setActiveTab("ipHistory");
         loadIPHistory();
       };
+
       tdActions.appendChild(btnHist);
 
       tr.appendChild(tdIp);
@@ -240,17 +242,19 @@ async function loadIPs() {
 
       tbody.appendChild(tr);
 
-      // Cargar info IP y marcador en el mapa
+      // Geo info + marker
       try {
         const info = await fetchJson(`${ADMIN_API}/ipinfo/${encodeURIComponent(item.ip)}`);
         if (info && info.status === "success") {
           tdCity.textContent = info.city || "-";
           tdCountry.textContent = info.country || "-";
 
-          if (info.lat && info.lon && map) {
+          if (info.lat && info.lon) {
             const marker = L.marker([info.lat, info.lon]).addTo(map);
             marker.bindPopup(
-              `<b>${item.ip}</b><br>${info.city || ""}, ${info.country || ""}<br>${info.isp || ""}`
+              `<b>${escapeHtml(item.ip)}</b><br>${escapeHtml(info.city || "")}, ${escapeHtml(
+                info.country || ""
+              )}<br>${escapeHtml(info.isp || "")}`
             );
             mapMarkers.push(marker);
           }
@@ -258,39 +262,34 @@ async function loadIPs() {
           tdCity.textContent = "-";
           tdCountry.textContent = "-";
         }
-      } catch (geoErr) {
-        console.warn("Error obteniendo info de IP:", item.ip, geoErr);
+      } catch {
         tdCity.textContent = "-";
         tdCountry.textContent = "-";
       }
     }
   } catch (err) {
-    console.error("Error cargando IPs:", err);
-    alert("Error cargando lista de IPs");
+    console.error(err);
+    toast("Error cargando lista de IPs", "error");
   }
 }
 
 // =============================
 // HISTORIAL POR IP
 // =============================
-
 async function loadIPHistory() {
   const ip = document.getElementById("ipSearch").value.trim();
-  if (!ip) {
-    alert("Escribe una IP");
-    return;
-  }
+  if (!ip) return toast("Escribe una IP", "error");
 
   try {
     const msgs = await fetchJson(`${ADMIN_API}/messages/ip/${encodeURIComponent(ip)}`);
     const box = document.getElementById("ipHistoryBox");
 
     if (!msgs.length) {
-      box.innerHTML = `<p>No hay mensajes para la IP <b>${ip}</b>.</p>`;
+      box.innerHTML = `<p>No hay mensajes para la IP <b>${escapeHtml(ip)}</b>.</p>`;
       return;
     }
 
-    let html = `<h3>Historial para IP: ${ip}</h3><ul>`;
+    let html = `<h3>Historial para IP: ${escapeHtml(ip)}</h3><ul>`;
     msgs.forEach((m) => {
       html += `<li><b>${escapeHtml(m.role)}:</b> ${escapeHtml(m.text)} <i>(${formatDate(
         m.createdAt
@@ -299,15 +298,14 @@ async function loadIPHistory() {
     html += "</ul>";
     box.innerHTML = html;
   } catch (err) {
-    console.error("Error en historial por IP:", err);
-    alert("Error cargando historial por IP");
+    console.error(err);
+    toast("Error cargando historial por IP", "error");
   }
 }
 
 // =============================
-// HISTORIAL GENERAL (MENSAJES)
+// HISTORIAL GENERAL
 // =============================
-
 async function loadGeneralHistory() {
   try {
     const msgs = await fetchJson(`${ADMIN_API}/messages`);
@@ -333,15 +331,14 @@ async function loadGeneralHistory() {
       tbody.appendChild(tr);
     });
   } catch (err) {
-    console.error("Error cargando historial general:", err);
-    alert("Error cargando historial de mensajes");
+    console.error(err);
+    toast("Error cargando historial general", "error");
   }
 }
 
 // =============================
-// RESPUESTAS PERSONALIZADAS
+// CUSTOM REPLIES
 // =============================
-
 async function loadCustomReplies() {
   try {
     const replies = await fetchJson(CUSTOM_URL);
@@ -358,8 +355,7 @@ async function loadCustomReplies() {
       tdA.innerHTML = `<div class="small">${escapeHtml(r.answer)}</div>`;
 
       const tdK = document.createElement("td");
-      const kws = (r.keywords || []).join(", ");
-      tdK.innerHTML = `<div class="small">${escapeHtml(kws)}</div>`;
+      tdK.innerHTML = `<div class="small">${escapeHtml((r.keywords || []).join(", "))}</div>`;
 
       const tdDel = document.createElement("td");
       const btnDel = document.createElement("button");
@@ -375,8 +371,8 @@ async function loadCustomReplies() {
       tbody.appendChild(tr);
     });
   } catch (err) {
-    console.error("Error cargando custom replies:", err);
-    alert("Error cargando respuestas personalizadas");
+    console.error(err);
+    toast("Error cargando respuestas personalizadas", "error");
   }
 }
 
@@ -385,10 +381,7 @@ async function addCustom() {
   const answer = document.getElementById("aInput").value.trim();
   const keywordsStr = document.getElementById("kInput").value.trim();
 
-  if (!question || !answer) {
-    alert("Pregunta y respuesta son obligatorias.");
-    return;
-  }
+  if (!question || !answer) return toast("Pregunta y respuesta son obligatorias", "error");
 
   const payload = {
     question,
@@ -400,53 +393,95 @@ async function addCustom() {
   };
 
   try {
-    await fetchJson(CUSTOM_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
+    await fetchJson(CUSTOM_URL, { method: "POST", body: JSON.stringify(payload) });
     document.getElementById("qInput").value = "";
     document.getElementById("aInput").value = "";
     document.getElementById("kInput").value = "";
-
+    toast("Respuesta personalizada guardada", "success");
     loadCustomReplies();
   } catch (err) {
-    console.error("Error agregando custom:", err);
-    alert("Error agregando respuesta personalizada");
+    console.error(err);
+    toast("Error agregando respuesta personalizada", "error");
   }
 }
 
 async function deleteCustom(id) {
   if (!confirm("¿Eliminar esta respuesta personalizada?")) return;
-
   try {
     await fetchJson(`${CUSTOM_URL}/${id}`, { method: "DELETE" });
+    toast("Eliminada", "success");
     loadCustomReplies();
   } catch (err) {
-    console.error("Error eliminando custom:", err);
-    alert("Error eliminando respuesta personalizada");
+    console.error(err);
+    toast("Error eliminando", "error");
   }
 }
+
 // =============================
-// EXPORTS
+// SOCKET.IO REALTIME
 // =============================
-function exportCustomCSV() {
-  window.location.href = "/admin/custom-replies/export-csv";
-}
+(function initRealtime() {
+  // socket.io client viene desde CDN en admin.html (si no lo tienes, te lo doy en el módulo 3)
+  if (typeof io === "undefined") {
+    console.warn("socket.io client no está cargado");
+    return;
+  }
 
-function exportCustomPDF() {
-  window.location.href = "/admin/custom-replies/export-pdf";
-}
+  const socket = io({
+    auth: { token },
+  });
 
-function exportMessagesCSV() {
-  // Tomamos filtros actuales para exportar solo lo filtrado
-  const from = document.getElementById("filterFrom")?.value || "";
-  const to = document.getElementById("filterTo")?.value || "";
-  const ip = document.getElementById("filterIp")?.value || "";
-  const role = document.getElementById("filterRole")?.value || "";
-  const q = document.getElementById("filterQ")?.value || "";
+  socket.on("connect", () => {
+    toast("Tiempo real conectado", "success");
+  });
 
-  const params = new URLSearchParams({ from, to, ip, role, q });
-  window.location.href = `/admin/messages/export-csv?${params.toString()}`;
-}
+  socket.on("connect_error", (err) => {
+    console.error("Socket error:", err);
+    toast("Tiempo real no autorizado / token inválido", "error");
+  });
+
+  socket.on("new_message", (msg) => {
+    // Notificación solo para mensajes de usuario
+    if (msg?.role === "user") {
+      toast(`Nuevo mensaje (${msg.ip || "IP?"}): ${String(msg.text || "").slice(0, 80)}...`, "info");
+    }
+
+    // Si estás en historial general, inserta arriba
+    const active = document.querySelector(".tab-content.active")?.id;
+    if (active === "messages") {
+      const tbody = document.getElementById("generalHistory");
+      if (tbody) {
+        const tr = document.createElement("tr");
+        const tdRole = document.createElement("td");
+        tdRole.textContent = msg.role;
+
+        const tdText = document.createElement("td");
+        tdText.innerHTML = `<div class="small">${escapeHtml(msg.text)}</div>`;
+
+        const tdDate = document.createElement("td");
+        tdDate.textContent = formatDate(msg.createdAt);
+
+        tr.appendChild(tdRole);
+        tr.appendChild(tdText);
+        tr.appendChild(tdDate);
+
+        // arriba = más nuevo
+        tbody.prepend(tr);
+      }
+    }
+
+    // Actualización rápida de contadores del dashboard si está visible
+    if (active === "dashboard") {
+      // Incrementar total mensajes “rápido”
+      const el = document.getElementById("totalMessages");
+      if (el) el.textContent = String((parseInt(el.textContent || "0", 10) || 0) + 1);
+
+      // Si quieres exactitud perfecta, recarga dashboard (más pesado):
+      // loadDashboard();
+    }
+  });
+
+  socket.on("spam_alert", (data) => {
+    toast(`SPAM/FLOOD detectado de IP ${data.ip} (bloqueo temporal)`, "error");
+  });
+})();
