@@ -153,4 +153,4 @@ router.post("/block-ip", (req, res) => {
 // =======================================================================
 // ✅ EXPORT FINAL (SOLO UNA VEZ, AL FINAL)
 // =======================================================================
-module.exports = router;
+export default router;
