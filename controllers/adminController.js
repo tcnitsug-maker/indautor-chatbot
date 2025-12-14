@@ -1,21 +1,35 @@
-const Message = require("../models/Message");
+const AdminUser = require("../models/AdminUser");
+const bcrypt = require("bcryptjs");
 
-exports.getAllMessages = async (req, res) => {
+exports.changePassword = async (req, res) => {
   try {
-    const messages = await Message.find().sort({ createdAt: -1 });
-    res.json(messages);
-  } catch (error) {
-    console.error("Error getAllMessages:", error);
-    res.status(500).json({ error: "Error obteniendo mensajes" });
-  }
-};
+    const adminId = req.admin.id;
+    const { currentPassword, newPassword } = req.body;
 
-exports.deleteMessage = async (req, res) => {
-  try {
-    await Message.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Error deleteMessage:", error);
-    res.status(500).json({ error: "Error eliminando mensaje" });
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Faltan datos" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "La nueva contraseña es muy corta" });
+    }
+
+    const user = await AdminUser.findById(adminId);
+    if (!user) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const ok = await bcrypt.compare(currentPassword, user.password);
+    if (!ok) {
+      return res.status(401).json({ error: "Contraseña actual incorrecta" });
+    }
+
+    user.password = newPassword; // se hashea solo (pre-save)
+    await user.save();
+
+    res.json({ ok: true, message: "Contraseña actualizada correctamente" });
+  } catch (err) {
+    console.error("changePassword:", err);
+    res.status(500).json({ error: "Error al cambiar contraseña" });
   }
 };
