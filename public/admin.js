@@ -288,14 +288,24 @@ async function importCustomReplies() {
 // =====================================================
 // EXPORTS
 // =====================================================
-function downloadCustomTemplate() {
-  window.open("/admin/custom-replies/template-xlsx", "_blank");
-}
-function downloadCustomCSV() {
-  window.open("/admin/custom-replies/export-csv", "_blank");
-}
-function downloadCustomPDF() {
-  window.open("/admin/custom-replies/export-pdf", "_blank");
+async function downloadCustomTemplate() {
+  const r = await fetch("/admin/custom-replies/template-xlsx", {
+    headers: { Authorization: "Bearer " + token }
+  });
+
+  if (!r.ok) return alert("No se pudo descargar la plantilla");
+
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "plantilla_respuestas.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  URL.revokeObjectURL(url);
 }
 
 // =====================================================
