@@ -1,50 +1,31 @@
 console.log("✅ admin.js cargado");
 
-const LOGIN_URL = "/admin-auth/login";
+function showTab(id) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".navbtn").forEach(b => b.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  event.target.classList.add("active");
+}
 
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("loginBtn");
-  if (btn) {
-    btn.addEventListener("click", loginAdmin);
+function logout() {
+  localStorage.removeItem("adminToken");
+  window.location.href = "/admin-panel.html";
+}
+
+// Datos DEMO (luego los conectamos al backend)
+document.getElementById("totalMessages").innerText = 123;
+document.getElementById("totalIPs").innerText = 45;
+document.getElementById("todayMessages").innerText = 12;
+
+// Chart demo
+const ctx = document.getElementById("chart");
+new Chart(ctx, {
+  type: "bar",
+  data: {
+    labels: ["Lun","Mar","Mié","Jue","Vie"],
+    datasets: [{
+      label: "Mensajes",
+      data: [12,19,7,15,10]
+    }]
   }
 });
-
-async function loginAdmin() {
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
-  const errorBox = document.getElementById("loginError");
-
-  errorBox.style.display = "none";
-
-  if (!username || !password) {
-    errorBox.textContent = "Ingresa usuario y contraseña";
-    errorBox.style.display = "block";
-    return;
-  }
-
-  try {
-    const res = await fetch(LOGIN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok || !data.token) {
-      errorBox.textContent = data.error || "Login incorrecto";
-      errorBox.style.display = "block";
-      return;
-    }
-
-    localStorage.setItem("adminToken", data.token);
-    localStorage.setItem("adminUser", data.username);
-    localStorage.setItem("adminRole", data.role);
-
-    window.location.href = "dashboard.html";
-  } catch (err) {
-    console.error(err);
-    errorBox.textContent = "Error de conexión";
-    errorBox.style.display = "block";
-  }
-}
