@@ -1,19 +1,41 @@
 // routes/adminRoutes.js
 const express = require("express");
 const router = express.Router();
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
+const { v4: uuidv4 } = require("uuid");
+const fetch = require("node-fetch");
+const PDFDocument = require("pdfkit");
+const XLSX = require("xlsx");
 
 // =====================
-// Helpers: permisos
+// Helpers: Imports y Modelos
 // =====================
-const ROLE_ORDER = ["support","analyst","editor","super"];
+// Ajusta la ruta "../middleware/authAdmin" según tu estructura real
+const { normalizeRole } = require("../middleware/authAdmin"); 
+const Message = require("../models/Message");
+const CustomReply = require("../models/CustomReply");
+const AdminUser = require("../models/AdminUser");
+const BlockedIP = require("../models/BlockedIP");
+const Setting = require("../models/Setting");
+const VideoAsset = require("../models/VideoAsset");
+
+
+// =====================
+// Helpers: Permisos
+// =====================
+const ROLE_ORDER = ["support", "analyst", "editor", "super"];
+
 function roleAtLeast(userRole, requiredRole) {
   const u = normalizeRole(userRole);
-  // normalizeRole devuelve: support/analyst/editor/super
   const order = ROLE_ORDER;
   return order.indexOf(u) >= order.indexOf(requiredRole);
 }
+
 function requireRole(requiredRole) {
   return (req, res, next) => {
+    // req.admin debe venir del middleware de autenticación previo
     if (!req.admin) return res.status(401).json({ error: "No autorizado" });
     if (!roleAtLeast(req.admin.role, requiredRole)) {
       return res.status(403).json({ error: "Permisos insuficientes" });
@@ -22,45 +44,42 @@ function requireRole(requiredRole) {
   };
 }
 
-const Message = require("../models/Message");
-const CustomReply = require("../models/CustomReply");
-const fetch = require("node-fetch");
-const PDFDocument = require("pdfkit"); // npm install pdfkit
-const path = require("path");
-const fs = require("fs");
-const multer = require("multer");
-const { v4: uuidv4 } = require("uuid");
-const VideoAsset = require("../models/VideoAsset");
-const { normalizeRole } = require("../middleware/authAdmin");
-const AdminUser = require("../models/AdminUser");
-const BlockedIP = require("../models/BlockedIP");
-const Setting = require("../models/Setting");
-const XLSX = require("xlsx");
+// =====================
+// Helper: Filtro Unificado
+// =====================
+function buildMessageFilter(query) {
+  const { from, to, start, end, ip, role, q, source } = query;
+  const filter = {};
 
+  // Unificar fechas
+  const startDate = from || start;
+  const endDate = to || end;
 
-// =======================================================================
-// 1. GET /admin/messages  → Historial general con filtros
-//    Query params opcionales: ?from=YYYY-MM-DD&to=YYYY-MM-DD&ip=&role=&q=
-// =======================================================================
-router.get("/messages", async (req, res) => {
-  try {
-    const { from, to, ip, role, q } = req.query;
-    const filter = {};
-
-    if (from || to) {
-      filter.createdAt = {};
-      if (from) filter.createdAt.$gte = new Date(from);
-      if (to) {
-        const d = new Date(to);
-        d.setHours(23, 59, 59, 999);
-        filter.createdAt.$lte = d;
-      }
+  if (startDate || endDate) {
+    filter.createdAt = {};
+    if (startDate) filter.createdAt.$gte = new Date(startDate);
+    if (endDate) {
+      const d = new Date(endDate);
+      d.setHours(23, 59, 59, 999);
+      filter.createdAt.$lte = d;
     }
+  }
 
-    if (ip) filter.ip = ip;
-    if (role) filter.role = role;
-    if (q) filter.text = { $regex: q, $options: "i" };
+  if (ip) filter.ip = ip;
+  if (role) filter.role = role;
+  if (source) filter.source = source;
+  if (q) filter.text = { $regex: q, $options: "i" };
 
+  return filter;
+}
+
+
+// =======================================================================
+// 1. GET /admin/messages → Historial JSON
+// =======================================================================
+router.get("/messages", requireRole("support"), async (req, res) => {
+  try {
+    const filter = buildMessageFilter(req.query);
     const msgs = await Message.find(filter).sort({ createdAt: -1 }).lean();
     res.json(msgs);
   } catch (err) {
@@ -69,76 +88,52 @@ router.get("/messages", async (req, res) => {
   }
 });
 
+
 // =======================================================================
-// 2. GET /admin/messages/export-csv  → Exportar historial (con filtros) CSV
+// 2. GET /admin/messages/export-csv → Exportar CSV (Con tu formato)
 // =======================================================================
-router.get("/messages/export-csv", async (req, res) => {
+router.get("/messages/export-csv", requireRole("support"), async (req, res) => {
   try {
-    const { from, to, ip, role, q } = req.query;
-    const filter = {};
+    const filter = buildMessageFilter(req.query);
+    const messages = await Message.find(filter).sort({ createdAt: -1 }).lean();
 
-    if (from || to) {
-      filter.createdAt = {};
-      if (from) filter.createdAt.$gte = new Date(from);
-      if (to) {
-        const d = new Date(to);
-        d.setHours(23, 59, 59, 999);
-        filter.createdAt.$lte = d;
-      }
-    }
+    // Construcción manual del CSV como en tu fragmento
+    let csv = "Rol,Mensaje,Fuente,IP,Fecha\n";
 
-    if (ip) filter.ip = ip;
-    if (role) filter.role = role;
-    if (q) filter.text = { $regex: q, $options: "i" };
-
-    const msgs = await Message.find(filter).sort({ createdAt: -1 }).lean();
+    messages.forEach(m => {
+      // Usamos m.text que es lo estándar, o m.message por si acaso
+      const contenido = (m.text || m.message || "").replace(/"/g, '""').replace(/\n/g, " ");
+      const fecha = m.createdAt ? new Date(m.createdAt).toISOString() : "";
+      
+      csv += `"${m.role || ""}","${contenido}","${m.source || ""}","${m.ip || ""}","${fecha}"\n`;
+    });
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", "attachment; filename=\"historial_chat.csv\"");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=historial_chatbot.csv"
+    );
+    res.send(csv);
 
-    const header = "fecha,ip,rol,texto\n";
-    res.write(header);
-
-    for (const m of msgs) {
-      const row = [
-        (m.createdAt || "").toISOString(),
-        m.ip || "",
-        m.role || "",
-        (m.text || "").replace(/"/g, '""'),
-      ]
-        .map((v) => `"${v}"`)
-        .join(",");
-      res.write(row + "\n");
-    }
-
-    res.end();
   } catch (err) {
-    console.error("Error exportando CSV:", err);
-    res.status(500).json({ error: "No se pudo exportar el historial." });
+    console.error(err);
+    res.status(500).json({ error: "Error exportando historial" });
   }
 });
 
-// =======================================================================
-// 3. GET /admin/messages/export-xlsx  → Exportar historial (con filtros) XLSX
-// =======================================================================
-router.get("/messages/export-xlsx", async (req, res) => {
-  try {
-    const { start, end, ip, source } = req.query;
-    const q = {};
-    if (start || end) {
-      q.createdAt = {};
-      if (start) q.createdAt.$gte = new Date(start);
-      if (end) q.createdAt.$lte = new Date(end);
-    }
-    if (ip) q.ip = ip;
-    if (source) q.source = source;
 
-    const rows = await Message.find(q).sort({ createdAt: -1 }).lean();
+// =======================================================================
+// 3. GET /admin/messages/export-xlsx → Exportar XLSX
+// =======================================================================
+router.get("/messages/export-xlsx", requireRole("support"), async (req, res) => {
+  try {
+    const filter = buildMessageFilter(req.query);
+    const rows = await Message.find(filter).sort({ createdAt: -1 }).lean();
 
     const data = rows.map(r => ({
-      Fecha: new Date(r.createdAt).toISOString(),
+      Fecha: r.createdAt ? new Date(r.createdAt).toISOString() : "",
       Rol: r.role,
-      Mensaje: r.text,
+      Mensaje: r.text || r.message,
       IP: r.ip || "",
       Fuente: r.source || "",
     }));
@@ -149,7 +144,7 @@ router.get("/messages/export-xlsx", async (req, res) => {
 
     const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", "attachment; filename=mensajes.xlsx");
+    res.setHeader("Content-Disposition", "attachment; filename=historial_mensajes.xlsx");
     res.send(buf);
   } catch (e) {
     console.error(e);
@@ -158,8 +153,10 @@ router.get("/messages/export-xlsx", async (req, res) => {
 });
 
 // =======================================================================
-// 4. GET /admin/users/export-xlsx  → Exportar usuarios admin XLSX (super)
+// 4. REPORTES EXCEL (Usuarios, IPs) - Solo Super Admin
 // =======================================================================
+
+// Exportar Usuarios
 router.get("/users/export-xlsx", requireRole("super"), async (req, res) => {
   try {
     const rows = await AdminUser.find().select("username role active createdAt updatedAt").lean();
@@ -180,14 +177,11 @@ router.get("/users/export-xlsx", requireRole("super"), async (req, res) => {
     res.setHeader("Content-Disposition", "attachment; filename=usuarios.xlsx");
     res.send(buf);
   } catch (e) {
-    console.error(e);
     res.status(500).json({ error: "Error exportando usuarios" });
   }
 });
 
-// =======================================================================
-// 5. GET /admin/blocked-ips/export-xlsx → Exportar IPs bloqueadas XLSX (super)
-// =======================================================================
+// Exportar IPs Bloqueadas
 router.get("/blocked-ips/export-xlsx", requireRole("super"), async (req, res) => {
   try {
     const rows = await BlockedIP.find().sort({ updatedAt: -1 }).lean();
@@ -196,709 +190,211 @@ router.get("/blocked-ips/export-xlsx", requireRole("super"), async (req, res) =>
       Activo: r.active ? "Bloqueada" : "Desbloqueada",
       Motivo: r.reason || "",
       Creado: r.createdAt ? new Date(r.createdAt).toISOString() : "",
-      Actualizado: r.updatedAt ? new Date(r.updatedAt).toISOString() : "",
     }));
-
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
     XLSX.utils.book_append_sheet(wb, ws, "IPs");
-
     const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", "attachment; filename=ips_bloqueadas.xlsx");
     res.send(buf);
   } catch (e) {
-    console.error(e);
     res.status(500).json({ error: "Error exportando IPs" });
   }
 });
 
+
 // =======================================================================
-// 3. GET /admin/custom-replies → Listar respuestas personalizadas (ordenadas por prioridad)
-//    Permisos: analyst+
+// 5. GESTIÓN DE RESPUESTAS PERSONALIZADAS (Custom Replies)
 // =======================================================================
+
+// Listar
 router.get("/custom-replies", requireRole("analyst"), async (req, res) => {
   try {
     const replies = await CustomReply.find().sort({ priority: -1, createdAt: -1 }).lean();
     res.json(replies);
   } catch (err) {
-    console.error("Error obteniendo custom replies:", err);
-    res.status(500).json({ error: "No se pudieron obtener las respuestas personalizadas." });
+    res.status(500).json({ error: "Error obteniendo respuestas." });
   }
 });
 
-// =======================================================================
-// 3.1 GET /admin/custom-replies/template-xlsx → Plantilla Excel
-//    Permisos: analyst+
-// =======================================================================
-router.get("/custom-replies/template-xlsx", requireRole("analyst"), async (req, res) => {
-  try {
-    const rows = [
-      {
-        trigger: "horario",
-        response: "Nuestro horario es de Lunes a Viernes de 9:00 a 17:00.",
-        keywords: "horario, atención, servicio",
-        enabled: 1,
-        priority: 10,
-        type: "text",
-        video_url: "",
-        video_file: "",
-        video_name: "",
-      },
-      {
-        trigger: "video informativo",
-        response: "Te comparto el video con la explicación.",
-        keywords: "video, tutorial",
-        enabled: 1,
-        priority: 5,
-        type: "video",
-        video_url: "https://www.youtube.com/embed/XXXX",
-        video_file: "",
-        video_name: "",
-      },
-    ];
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(wb, ws, "replies");
-    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      'attachment; filename="plantilla_respuestas.xlsx"'
-    );
-    res.end(buf);
-  } catch (err) {
-    console.error("Error generando plantilla xlsx:", err);
-    res.status(500).json({ error: "No se pudo generar la plantilla." });
-  }
-});
-
-// =======================================================================
-// 3.2 POST /admin/custom-replies/import-excel → Import masivo desde Excel/CSV
-//    Permisos: editor+
-//    FormData: file
-// =======================================================================
-const excelUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-});
-
-router.post(
-  "/custom-replies/import-excel",
-  requireRole("editor"),
-  excelUpload.single("file"),
-  async (req, res) => {
-    try {
-      if (!req.file) return res.status(400).json({ error: "Falta archivo" });
-
-      const wb = XLSX.read(req.file.buffer, { type: "buffer" });
-      const sheetName = wb.SheetNames[0];
-      if (!sheetName) return res.status(400).json({ error: "Archivo sin hojas" });
-      const ws = wb.Sheets[sheetName];
-
-      // Normalizar cabeceras: trigger/response/keywords/enabled/priority/type/video_url/video_file/video_name
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
-
-      let created = 0;
-      let updated = 0;
-      let skipped = 0;
-      const errors = [];
-
-      for (let i = 0; i < rows.length; i++) {
-        const raw = rows[i] || {};
-        // aceptar variantes de columnas
-        const trigger = String(raw.trigger || raw.question || raw.pregunta || "").trim();
-        const response = String(raw.response || raw.answer || raw.respuesta || "").trim();
-        if (!trigger || !response) {
-          skipped++;
-          continue;
-        }
-
-        const keywordsRaw = raw.keywords ?? raw.palabras_clave ?? raw.tags ?? "";
-        const keywords = String(keywordsRaw)
-          .split(/[,|]/)
-          .map((s) => s.trim())
-          .filter(Boolean);
-
-        const enabledVal = raw.enabled ?? raw.activo ?? 1;
-        const enabled = String(enabledVal).trim() === "0" ? false : !!enabledVal;
-
-        const priority = Number(raw.priority ?? raw.prioridad ?? 1) || 1;
-        const typeRaw = String(raw.type ?? raw.tipo ?? "text").toLowerCase();
-        const type = typeRaw === "video" ? "video" : "text";
-
-        const video_url = String(raw.video_url ?? raw.videoUrl ?? raw.url_video ?? "").trim();
-        const video_file = String(raw.video_file ?? raw.videoFile ?? raw.archivo_video ?? "").trim();
-        const video_name = String(raw.video_name ?? raw.videoName ?? raw.nombre_video ?? "").trim();
-
-        try {
-          const existing = await CustomReply.findOne({ trigger }).lean();
-          if (existing) {
-            await CustomReply.updateOne(
-              { _id: existing._id },
-              {
-                $set: {
-                  trigger,
-                  response,
-                  question: trigger,
-                  answer: response,
-                  keywords,
-                  enabled,
-                  priority,
-                  type,
-                  video_url,
-                  video_file,
-                  video_name,
-                },
-              }
-            );
-            updated++;
-          } else {
-            await CustomReply.create({
-              trigger,
-              response,
-              question: trigger,
-              answer: response,
-              keywords,
-              enabled,
-              priority,
-              type,
-              video_url,
-              video_file,
-              video_name,
-            });
-            created++;
-          }
-        } catch (e) {
-          errors.push({ row: i + 2, trigger, error: e.message });
-        }
-      }
-
-      res.json({ ok: true, created, updated, skipped, errors });
-    } catch (err) {
-      console.error("Error importando excel:", err);
-      res.status(500).json({ error: "No se pudo importar el archivo." });
-    }
-  }
-);
-
-// =======================================================================
-// 3.3 GET /admin/profile → Perfil del usuario actual
-// =======================================================================
-router.get("/profile", async (req, res) => {
-  try {
-    const u = await AdminUser.findById(req.admin.id).select("username role active createdAt updatedAt").lean();
-    if (!u) return res.status(404).json({ error: "Usuario no encontrado" });
-    res.json(u);
-  } catch (err) {
-    console.error("Error profile:", err);
-    res.status(500).json({ error: "No se pudo cargar el perfil" });
-  }
-});
-
-// =======================================================================
-// 3.4 PUT /admin/profile/password → Cambiar password (usuario actual)
-// =======================================================================
-router.put("/profile/password", async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body || {};
-    if (!currentPassword || !newPassword) return res.status(400).json({ error: "Faltan datos" });
-    if (String(newPassword).length < 6) return res.status(400).json({ error: "La nueva contraseña es muy corta" });
-
-    const user = await AdminUser.findById(req.admin.id);
-    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
-
-    const ok = await user.comparePassword(currentPassword);
-    if (!ok) return res.status(401).json({ error: "Contraseña actual incorrecta" });
-
-    user.password = newPassword;
-    await user.save();
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("Error change password:", err);
-    res.status(500).json({ error: "No se pudo cambiar la contraseña" });
-  }
-});
-
-// =======================================================================
-// 3.5 Usuarios admin (gestión)
-//    - GET /admin/users (super)
-//    - POST /admin/users (super)
-//    - PUT /admin/users/:id (super)
-//    - PUT /admin/users/:id/password (super)
-// =======================================================================
-router.get("/users", requireRole("super"), async (req, res) => {
-  try {
-    const users = await AdminUser.find().select("username role active createdAt updatedAt").sort({ createdAt: -1 }).lean();
-    res.json(users);
-  } catch (err) {
-    console.error("Error users list:", err);
-    res.status(500).json({ error: "No se pudo listar usuarios" });
-  }
-});
-
-router.post("/users", requireRole("super"), async (req, res) => {
-  try {
-    const { username, password, role = "viewer", active = true } = req.body || {};
-    if (!username || !password) return res.status(400).json({ error: "Faltan username o password" });
-    if (String(password).length < 6) return res.status(400).json({ error: "Password muy corta" });
-
-    const exists = await AdminUser.findOne({ username }).lean();
-    if (exists) return res.status(409).json({ error: "Ese usuario ya existe" });
-
-    const u = await AdminUser.create({ username, password, role, active: !!active });
-    res.json({ ok: true, id: u._id });
-  } catch (err) {
-    console.error("Error users create:", err);
-    res.status(500).json({ error: "No se pudo crear usuario" });
-  }
-});
-
-router.put("/users/:id", requireRole("super"), async (req, res) => {
-  try {
-    const { role, active } = req.body || {};
-    const update = {};
-    if (role) update.role = role;
-    if (typeof active === "boolean") update.active = active;
-
-    const u = await AdminUser.findByIdAndUpdate(req.params.id, update, { new: true })
-      .select("username role active createdAt updatedAt")
-      .lean();
-    if (!u) return res.status(404).json({ error: "Usuario no encontrado" });
-    res.json({ ok: true, user: u });
-  } catch (err) {
-    console.error("Error users update:", err);
-    res.status(500).json({ error: "No se pudo actualizar usuario" });
-  }
-});
-
-router.put("/users/:id/password", requireRole("super"), async (req, res) => {
-  try {
-    const { newPassword } = req.body || {};
-    if (!newPassword) return res.status(400).json({ error: "Falta newPassword" });
-    if (String(newPassword).length < 6) return res.status(400).json({ error: "Password muy corta" });
-
-    const user = await AdminUser.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
-    user.password = newPassword;
-    await user.save();
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("Error users reset password:", err);
-    res.status(500).json({ error: "No se pudo cambiar password" });
-  }
-});
-
-// =======================================================================
-// 4. POST /admin/custom-replies → Crear respuesta personalizada
-//    Permisos: editor+
-// =======================================================================
+// Crear
 router.post("/custom-replies", requireRole("editor"), async (req, res) => {
   try {
-    const {
-      trigger, response, keywords = [], enabled = true,
-      priority = 1, type = "text", video_url = "", video_file = "", video_name = ""
-    } = req.body || {};
-
-    if (!trigger || !response) {
-      return res.status(400).json({ error: "Faltan trigger o response" });
-    }
+    const { trigger, response, keywords = [], enabled = true, priority = 1, type = "text", video_url } = req.body;
+    if (!trigger || !response) return res.status(400).json({ error: "Faltan datos obligatorios" });
 
     const r = await CustomReply.create({
       trigger, response,
-      question: trigger,
-      answer: response,
-      keywords: Array.isArray(keywords) ? keywords : String(keywords).split(",").map(s => s.trim()).filter(Boolean),
+      question: trigger, answer: response, // Compatibilidad
+      keywords: Array.isArray(keywords) ? keywords : String(keywords).split(",").map(s=>s.trim()),
       enabled: !!enabled,
-      priority: Number(priority) || 1,
-      type: type === "video" ? "video" : "text",
-      video_url: video_url || "",
-      video_file: video_file || "",
-      video_name: video_name || ""
+      priority: Number(priority),
+      type, video_url
     });
-
     res.json(r);
-  } catch (err) {
-    console.error("Error creando custom reply:", err);
-    res.status(500).json({ error: "No se pudo crear la respuesta personalizada." });
+  } catch (e) {
+    res.status(500).json({ error: "Error creando respuesta" });
   }
 });
 
-// =======================================================================
-// 5. PUT /admin/custom-replies/:id → Editar respuesta personalizada
-//    Permisos: editor+
-// =======================================================================
+// Editar
 router.put("/custom-replies/:id", requireRole("editor"), async (req, res) => {
   try {
     const update = { ...req.body };
-
-    if (update.trigger && !update.question) update.question = update.trigger;
-    if (update.response && !update.answer) update.answer = update.response;
-    if (update.question && !update.trigger) update.trigger = update.question;
-    if (update.answer && !update.response) update.response = update.answer;
-
-    if (update.keywords && !Array.isArray(update.keywords)) {
-      update.keywords = String(update.keywords).split(",").map(s => s.trim()).filter(Boolean);
-    }
-
-    const r = await CustomReply.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
+    if (update.trigger) update.question = update.trigger;
+    if (update.response) update.answer = update.response;
+    
+    const r = await CustomReply.findByIdAndUpdate(req.params.id, update, { new: true });
     res.json(r);
-  } catch (err) {
-    console.error("Error actualizando custom reply:", err);
-    res.status(500).json({ error: "No se pudo actualizar la respuesta personalizada." });
+  } catch (e) {
+    res.status(500).json({ error: "Error actualizando respuesta" });
   }
 });
 
-// =======================================================================
-// 5.1 DELETE /admin/custom-replies/:id → Eliminar respuesta personalizada
-//    Permisos: super
-// =======================================================================
+// Eliminar
 router.delete("/custom-replies/:id", requireRole("super"), async (req, res) => {
   try {
     await CustomReply.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
-  } catch (err) {
-    console.error("Error eliminando custom reply:", err);
-    res.status(500).json({ error: "No se pudo eliminar la respuesta personalizada." });
+  } catch (e) {
+    res.status(500).json({ error: "Error eliminando respuesta" });
   }
 });
 
-// =======================================================================
-// 6. GET /admin/custom-replies/export-csv → Exportar custom replies CSV
-// =======================================================================
-// 6. GET /admin/custom-replies/export-csv → Exportar custom replies CSV
-// =======================================================================
-
-router.get("/custom-replies/export-csv", requireRole("analyst"), async (req, res) => {
+// Plantilla Excel
+router.get("/custom-replies/template-xlsx", requireRole("analyst"), async (req, res) => {
   try {
-    const replies = await CustomReply.find().sort({ priority: -1, createdAt: -1 }).lean();
+    const rows = [{ trigger: "ejemplo", response: "respuesta", keywords: "test", enabled: 1, priority: 5, type: "text" }];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "replies");
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", 'attachment; filename="plantilla.xlsx"');
+    res.end(buf);
+  } catch (e) { res.status(500).json({ error: "Error generando plantilla" }); }
+});
 
-    res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", "attachment; filename=\"respuestas_personalizadas.csv\"");
+// Importar Excel
+const excelUpload = multer({ storage: multer.memoryStorage() });
+router.post("/custom-replies/import-excel", requireRole("editor"), excelUpload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "Falta archivo" });
+    const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    let created = 0, updated = 0;
+    
+    for (const raw of rows) {
+      const trigger = String(raw.trigger || raw.pregunta || "").trim();
+      const response = String(raw.response || raw.respuesta || "").trim();
+      if (!trigger || !response) continue;
 
-    res.write("trigger,response,keywords,enabled,priority,type,video_url,video_file,video_name\n");
-    for (const r of replies) {
-      const row = [
-        (r.trigger || r.question || "").replace(/"/g, '""'),
-        (r.response || r.answer || "").replace(/"/g, '""').replace(/\n/g, " "),
-        Array.isArray(r.keywords) ? r.keywords.join("|").replace(/"/g, '""') : "",
-        r.enabled ? "1" : "0",
-        String(r.priority ?? 1),
-        (r.type || "text"),
-        (r.video_url || "").replace(/"/g, '""'),
-        (r.video_file || "").replace(/"/g, '""'),
-        (r.video_name || "").replace(/"/g, '""'),
-      ];
-      res.write("\"" + row.join("\",\"") + "\"\n");
+      const data = {
+        trigger, response, question: trigger, answer: response,
+        keywords: String(raw.keywords || "").split(","),
+        enabled: raw.enabled !== "0",
+        priority: Number(raw.priority) || 1,
+        type: raw.type || "text",
+        video_url: raw.video_url || ""
+      };
+
+      const exists = await CustomReply.findOne({ trigger });
+      if (exists) {
+        await CustomReply.updateOne({ _id: exists._id }, data);
+        updated++;
+      } else {
+        await CustomReply.create(data);
+        created++;
+      }
     }
-    res.end();
-  } catch (err) {
-    console.error("Error exportando CSV:", err);
-    res.status(500).json({ error: "No se pudo exportar." });
-  }
+    res.json({ ok: true, created, updated });
+  } catch (e) { res.status(500).json({ error: "Error importando excel" }); }
 });
 
-// =======================================================================
-// 7. GET /admin/custom-replies/export-pdf → Exportar custom replies a PDF
-// =======================================================================
-router.get("/custom-replies/export-pdf", async (req, res) => {
-  try {
-    const replies = await CustomReply.find().lean();
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "attachment; filename=\"respuestas_personalizadas.pdf\"");
-
-    const doc = new PDFDocument({ margin: 30 });
-    doc.pipe(res);
-
-    doc.fontSize(18).text("Respuestas Personalizadas INDARELÍN", { align: "center" });
-    doc.moveDown();
-
-    replies.forEach((r, idx) => {
-      doc.fontSize(12).text(`(${idx + 1}) Pregunta: ${r.question || ""}`);
-      doc.fontSize(12).text(`Respuesta: ${r.answer || ""}`);
-      doc.fontSize(10).text(`Keywords: ${(r.keywords || []).join(", ")}`);
-      doc.moveDown();
-    });
-
-    doc.end();
-  } catch (err) {
-    console.error("Error exportando PDF:", err);
-    res.status(500).json({ error: "No se pudo exportar PDF." });
-  }
-});
 
 // =======================================================================
-// 8. IPs + estadísticas (igual que antes) + flag de SPAM si total alto
+// 6. ESTADÍSTICAS Y BLOQUEOS
 // =======================================================================
 router.get("/ips", async (req, res) => {
   try {
-    const messages = await Message.find({}, { ip: 1, createdAt: 1 }).lean();
-    const stats = {};
-
-    for (const msg of messages) {
-      if (!msg.ip) continue;
-      if (!stats[msg.ip]) {
-        stats[msg.ip] = {
-          ip: msg.ip,
-          total: 0,
-          lastSeen: msg.createdAt,
-        };
-      }
-      stats[msg.ip].total++;
-      if (msg.createdAt > stats[msg.ip].lastSeen) {
-        stats[msg.ip].lastSeen = msg.createdAt;
-      }
-    }
-
-    // marcar IPs sospechosas de SPAM (ej. más de 100 mensajes)
-    const result = Object.values(stats).map((s) => ({
-      ...s,
-      spam: s.total >= 100,
-    }));
-
-    res.json(result);
-  } catch (err) {
-    console.error("Error obteniendo IPs:", err);
-    res.status(500).json({ error: "Error al obtener lista de IPs" });
-  }
-});
-
-// =======================================================================
-// 9. Info IP (geolocalización)
-// =======================================================================
-router.get("/ipinfo/:ip", async (req, res) => {
-  try {
-    const ip = req.params.ip;
-    const url = `http://ip-api.com/json/${ip}?fields=status,country,regionName,city,isp,query,lat,lon`;
-
-    const apiRes = await fetch(url);
-    const data = await apiRes.json();
-
-    res.json(data);
-  } catch (err) {
-    console.error("Error obteniendo info de IP:", err);
-    res.status(500).json({ error: "No se pudo obtener info de IP." });
-  }
-});
-
-// =======================================================================
-// 10. Historial por IP
-// =======================================================================
-router.get("/messages/ip/:ip", async (req, res) => {
-  try {
-    const msgs = await Message.find({ ip: req.params.ip }).sort({ createdAt: -1 }).lean();
-    res.json(msgs);
-  } catch (err) {
-    console.error("Error historial IP:", err);
-    res.status(500).json({ error: "No se pudo obtener historial por IP." });
-  }
-});
-
-// =======================================================================
-// 11. Top IPs (para gráficas avanzadas)
-// =======================================================================
-router.get("/stats/top-ips", async (req, res) => {
-  try {
     const agg = await Message.aggregate([
       { $match: { ip: { $ne: null } } },
-      { $group: { _id: "$ip", total: { $sum: 1 } } },
-      { $sort: { total: -1 } },
-      { $limit: 20 },
+      { $group: { _id: "$ip", total: { $sum: 1 }, lastSeen: { $max: "$createdAt" } } },
+      { $sort: { total: -1 } }
     ]);
-    res.json(agg);
-  } catch (err) {
-    console.error("Error top IPs:", err);
-    res.status(500).json({ error: "No se pudo obtener top IPs." });
-  }
-});
-
-// =======================================================================
-// 12. Top textos (frases más usadas) - muy simple
-// =======================================================================
-router.get("/stats/top-texts", async (req, res) => {
-  try {
-    const agg = await Message.aggregate([
-      { $group: { _id: "$text", total: { $sum: 1 } } },
-      { $sort: { total: -1 } },
-      { $limit: 20 },
-    ]);
-    res.json(agg);
-  } catch (err) {
-    console.error("Error top texts:", err);
-    res.status(500).json({ error: "No se pudo obtener top texts." });
-  }
-});
-
-// =======================================================================
-// =======================================================================
-// 13. BLOQUEO MANUAL DE IP (persistente en DB)
-//    - GET  /admin/blocked-ips
-//    - POST /admin/block-ip      {ip, reason?}
-//    - POST /admin/unblock-ip    {ip}
-// =======================================================================
-router.get("/blocked-ips", requireRole("super"), async (req, res) => {
-  try {
-    const rows = await BlockedIP.find().sort({ updatedAt: -1 }).lean();
-    res.json(rows);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Error obteniendo IPs bloqueadas" });
-  }
+    res.json(agg.map(x => ({ ip: x._id, total: x.total, lastSeen: x.lastSeen, spam: x.total > 100 })));
+  } catch (e) { res.status(500).json({ error: "Error IPs" }); }
 });
 
 router.post("/block-ip", requireRole("super"), async (req, res) => {
   try {
-    const { ip, reason = "" } = req.body || {};
-    if (!ip) return res.status(400).json({ error: "Falta IP" });
-
-    const row = await BlockedIP.findOneAndUpdate(
-      { ip },
-      { $set: { active: true, reason, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },
-      { upsert: true, new: true }
-    );
-
-    res.json({ ok: true, blocked: row });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Error bloqueando IP" });
-  }
+    const { ip, reason } = req.body;
+    await BlockedIP.findOneAndUpdate({ ip }, { active: true, reason, updatedAt: new Date() }, { upsert: true });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: "Error bloqueando IP" }); }
 });
 
 router.post("/unblock-ip", requireRole("super"), async (req, res) => {
   try {
-    const { ip } = req.body || {};
-    if (!ip) return res.status(400).json({ error: "Falta IP" });
-
-    const row = await BlockedIP.findOneAndUpdate(
-      { ip },
-      { $set: { active: false, updatedAt: new Date() } },
-      { new: true }
-    );
-
-    res.json({ ok: true, unblocked: ip, row });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Error desbloqueando IP" });
-  }
-});
-
-// =======================================================================
-// VIDEOS (biblioteca)
-// Permisos:
-//  - GET: analyst+
-//  - POST upload: editor+
-//  - DELETE: super
-// =======================================================================
-const videosDir = path.join(__dirname, "..", "uploads", "videos");
-if (!fs.existsSync(videosDir)) fs.mkdirSync(videosDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, videosDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || "").toLowerCase();
-    cb(null, `${Date.now()}-${uuidv4()}${ext}`);
-  },
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
-  fileFilter: (req, file, cb) => {
-    const ok = ["video/mp4", "video/webm", "video/ogg"].includes(file.mimetype);
-    if (!ok) return cb(new Error("Formato no soportado. Usa MP4/WebM/OGG."));
-    cb(null, true);
-  },
-});
-
-router.get("/videos", requireRole("analyst"), async (req, res) => {
-  const vids = await VideoAsset.find().sort({ createdAt: -1 }).lean();
-  res.json(vids);
-});
-
-router.post("/videos", requireRole("editor"), upload.single("video"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "No se subió archivo" });
-
-    const v = await VideoAsset.create({
-      originalName: req.file.originalname,
-      filename: req.file.filename,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      url: `/uploads/videos/${req.file.filename}`,
-      uploadedBy: req.admin?.username || "admin",
-    });
-
-    res.json(v);
-  } catch (e) {
-    console.error("Error subiendo video:", e);
-    res.status(500).json({ error: "No se pudo subir el video" });
-  }
-});
-
-router.delete("/videos/:id", requireRole("super"), async (req, res) => {
-  try {
-    const v = await VideoAsset.findById(req.params.id);
-    if (!v) return res.status(404).json({ error: "No encontrado" });
-
-    // borrar archivo
-    const p = path.join(videosDir, v.filename);
-    if (fs.existsSync(p)) fs.unlinkSync(p);
-
-    await VideoAsset.findByIdAndDelete(req.params.id);
+    const { ip } = req.body;
+    await BlockedIP.findOneAndUpdate({ ip }, { active: false, updatedAt: new Date() });
     res.json({ ok: true });
-  } catch (e) {
-    console.error("Error borrando video:", e);
-    res.status(500).json({ error: "No se pudo eliminar el video" });
-  }
+  } catch (e) { res.status(500).json({ error: "Error desbloqueando IP" }); }
 });
 
 
 // =======================================================================
-// 14. SETTINGS (límite IA)
-//    - GET  /admin/settings
-//    - PUT  /admin/settings/ai-limit   { ai_daily_limit_per_ip }
+// 7. GESTIÓN DE USUARIOS ADMIN (Profile & CRUD)
 // =======================================================================
-router.get("/settings", requireRole("super"), async (req, res) => {
+router.get("/profile", async (req, res) => {
+  const u = await AdminUser.findById(req.admin.id).select("-password");
+  res.json(u);
+});
+
+router.put("/profile/password", async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const user = await AdminUser.findById(req.admin.id);
+  if (!user || !(await user.comparePassword(currentPassword))) return res.status(401).json({ error: "Pass incorrecto" });
+  if (newPassword.length < 6) return res.status(400).json({ error: "Muy corta" });
+  user.password = newPassword;
+  await user.save();
+  res.json({ ok: true });
+});
+
+router.get("/users", requireRole("super"), async (req, res) => {
+  const users = await AdminUser.find().select("-password").sort({ createdAt: -1 });
+  res.json(users);
+});
+
+router.post("/users", requireRole("super"), async (req, res) => {
   try {
-    const rows = await Setting.find().lean();
-    const obj = {};
-    for (const r of rows) obj[r.key] = r.value;
-    res.json(obj);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Error leyendo settings" });
-  }
+    const { username, password, role } = req.body;
+    if (await AdminUser.findOne({ username })) return res.status(409).json({ error: "Existe" });
+    await AdminUser.create({ username, password, role });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: "Error creando usuario" }); }
 });
 
-const express = require("express");
-const router = express.Router();
-
-const Message = require("../models/Message");
-const Setting = require("../models/Setting");
-const requireRole = require("../middlewares/requireRole");
-
-    // ---------- CSV ----------
-    let csv = "Rol,Mensaje,Fuente,IP,Fecha\n";
-
-    messages.forEach(m => {
-      csv += `"${m.role || ""}","${(m.message || "").replace(/"/g, '""')}","${m.source || ""}","${m.ip || ""}","${m.createdAt}"\n`;
-    });
-
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader(
-      "Content-Disposition",
-      "attachment; filename=historial_chatbot.csv"
-    );
-    res.send(csv);
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error exportando historial" });
-  }
+router.put("/users/:id", requireRole("super"), async (req, res) => {
+  try {
+    await AdminUser.findByIdAndUpdate(req.params.id, req.body);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: "Error editando usuario" }); }
 });
 
+router.put("/users/:id/password", requireRole("super"), async (req, res) => {
+  try {
+    const u = await AdminUser.findById(req.params.id);
+    if (!u) return res.status(404).json({ error: "No user" });
+    u.password = req.body.newPassword;
+    await u.save();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: "Error reset pass" }); }
+});
+
+// =======================================================================
+// Exportación del Router
+// =======================================================================
 module.exports = router;
