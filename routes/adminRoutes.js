@@ -285,18 +285,7 @@ router.get("/custom-replies/template-xlsx", requireRole("analyst"), async (req, 
 // =======================================================================
 const excelUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ok =
-      file.mimetype === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-      file.mimetype === "application/vnd.ms-excel" ||
-      file.mimetype === "text/csv";
-
-    if (!ok) {
-      return cb(new Error("Formato no soportado"));
-    }
-    cb(null, true);
-  }
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
 router.post(
@@ -901,52 +890,6 @@ router.put("/settings/ai-limit", requireRole("super"), async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Error guardando setting" });
-  }
-});
-// =====================
-// METRICS DASHBOARD
-// =====================
-router.get("/metrics", async (req, res) => {
-  try {
-    const totalMessages = await Message.countDocuments();
-    const totalIPs = await Message.distinct("ip").then(r => r.length);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const todayMessages = await Message.countDocuments({
-      createdAt: { $gte: today }
-    });
-
-    // últimos 7 días
-    const labels = [];
-    const values = [];
-
-    for (let i = 6; i >= 0; i--) {
-      const d1 = new Date();
-      d1.setDate(d1.getDate() - i);
-      d1.setHours(0, 0, 0, 0);
-
-      const d2 = new Date(d1);
-      d2.setHours(23, 59, 59, 999);
-
-      labels.push(d1.toLocaleDateString());
-      values.push(
-        await Message.countDocuments({
-          createdAt: { $gte: d1, $lte: d2 }
-        })
-      );
-    }
-
-    res.json({
-      totalMessages,
-      totalIPs,
-      todayMessages,
-      chart: { labels, values }
-    });
-  } catch (e) {
-    console.error("metrics error:", e);
-    res.status(500).json({ error: "No se pudieron cargar métricas" });
   }
 });
 

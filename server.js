@@ -57,20 +57,23 @@ app.get("/admin.html", (req, res) => {
 // =====================
 // AUTH ADMIN (LOGIN)
 // =====================
+// ⚠️ adminAuthRoutes DEBE exportar router con module.exports
 const adminAuthRoutes = require("./routes/adminAuthRoutes");
 app.use("/admin-auth", adminAuthRoutes);
 
 // =====================
-// RUTAS ADMIN (PROTEGIDAS)
-// ⚠️ IMPORTANTE: authAdmin VA ANTES, multer va DENTRO de adminRoutes
+// RUTAS PROTEGIDAS ADMIN
 // =====================
 const authAdmin = require("./middleware/authAdmin");
+// ⚠️ adminRoutes DEBE exportar router con module.exports
 const adminRoutes = require("./routes/adminRoutes");
+
 app.use("/admin", authAdmin("viewer"), adminRoutes);
 
 // =====================
 // CHAT
 // =====================
+// ⚠️ chatController DEBE exportar { sendChat }
 const chatController = require("./controllers/chatController");
 app.post("/chat", chatController.sendChat);
 
@@ -95,7 +98,7 @@ io.use((socket, next) => {
 
     socket.admin = decoded;
     next();
-  } catch {
+  } catch (err) {
     next(new Error("BAD_TOKEN"));
   }
 });
