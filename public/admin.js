@@ -171,12 +171,13 @@ async function loadCustom() {
 
 function renderCustom(list) {
   customTable.innerHTML = "";
+
   list.forEach(r => {
     customTable.innerHTML += `
       <tr>
         <td>${esc(r.trigger)}</td>
-        <td>${r.type}</td>
-        <td>${r.priority}</td>
+        <td>${r.type || "text"}</td>
+        <td>${r.priority || 1}</td>
         <td>${r.enabled ? "ON" : "OFF"}</td>
         <td>
           <button onclick="editCustom('${r._id}')">✏️</button>
