@@ -26,20 +26,33 @@ const VideoAsset = require("../models/VideoAsset");
 // Helpers: Permisos
 // =====================
 router.get(
-  "/messages/export-xlsx",
-  requireRole(["support", "analyst", "editor", "super"]),
+  "/messages/export-csv",
+  authAdmin("support"),
   async (req, res) => {
     try {
-      const filter = buildMessageFilter(req.query);
-      const rows = await Message.find(filter).sort({ createdAt: -1 }).lean();
+      const rows = await Message.find({})
+        .sort({ createdAt: -1 })
+        .lean();
 
-      const data = rows.map(r => ({
-        Fecha: r.createdAt ? new Date(r.createdAt).toISOString() : "",
-        Rol: r.role || "",
-        Mensaje: r.text || r.message || "",
-        IP: r.ip || "",
-        Fuente: r.source || "",
-      }));
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="historial_chat.csv"'
+      );
+
+      let csv = "Fecha,IP,Rol,Mensaje\n";
+
+      rows.forEach(r => {
+        csv += `"${new Date(r.createdAt).toISOString()}","${r.ip||""}","${r.role||""}","${(r.text||"").replace(/"/g,'""')}"\n`;
+      });
+
+      res.send(csv);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "No se pudo exportar CSV" });
+    }
+  }
+);
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(data);
@@ -59,6 +72,45 @@ router.get(
       res.send(buffer);
     } catch (err) {
       console.error("Error exportando XLSX:", err);
+      res.status(500).json({ error: "No se pudo exportar XLSX" });
+    }
+  }
+);
+router.get(
+  "/messages/export-xlsx",
+  authAdmin("support"),
+  async (req, res) => {
+    try {
+      const rows = await Message.find({})
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const data = rows.map(r => ({
+        Fecha: new Date(r.createdAt).toISOString(),
+        Rol: r.role || "",
+        Mensaje: r.text || "",
+        IP: r.ip || "",
+        Fuente: r.source || ""
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "Mensajes");
+
+      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="historial_chat.xlsx"'
+      );
+
+      res.send(buffer);
+    } catch (err) {
+      console.error(err);
       res.status(500).json({ error: "No se pudo exportar XLSX" });
     }
   }
