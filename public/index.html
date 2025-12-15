@@ -1,134 +1,160 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Asistente INDARELÍN</title>
 
 <style>
 body {
-  margin: 0;
-  font-family: "Segoe UI", Arial, sans-serif;
-  background: #f1f1f1;
+  margin:0;
+  font-family:"Segoe UI",Arial,sans-serif;
+  background:#f2f2f2;
 }
 
-/* BOTÓN FLOTANTE */
-#chatBtn {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: #075e54;
-  color: white;
-  border: none;
-  font-size: 26px;
-  cursor: pointer;
-  box-shadow: 0 8px 20px rgba(0,0,0,.3);
-  z-index: 9999;
+/* BOTÓN */
+#chatBtn{
+  position:fixed;
+  right:20px;
+  bottom:20px;
+  width:64px;height:64px;
+  border-radius:50%;
+  background:#075e54;
+  color:#fff;
+  border:none;
+  font-size:26px;
+  cursor:pointer;
+  box-shadow:0 8px 20px rgba(0,0,0,.35);
+  z-index:9999;
 }
 
-/* CONTENEDOR CHAT */
-#chatBox {
-  position: fixed;
-  right: 20px;
-  bottom: 100px;
-  width: 360px;
-  max-height: 520px;
-  background: #e5ddd5;
-  border-radius: 14px;
-  display: none;
-  flex-direction: column;
-  box-shadow: 0 10px 30px rgba(0,0,0,.35);
-  overflow: hidden;
-  z-index: 9999;
+/* CHAT */
+#chatBox{
+  position:fixed;
+  right:20px;
+  bottom:100px;
+  width:360px;
+  max-height:540px;
+  background:#e5ddd5;
+  border-radius:14px;
+  display:none;
+  flex-direction:column;
+  overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  z-index:9999;
 }
 
 /* HEADER */
-#chatHeader {
-  background: #075e54;
-  color: white;
-  padding: 10px;
-  font-weight: 600;
+#chatHeader{
+  background:#075e54;
+  color:#fff;
+  padding:10px;
+  font-weight:600;
+  display:flex;
+  justify-content:space-between;
 }
 
 /* MENSAJES */
-#chatMessages {
-  flex: 1;
-  padding: 12px;
-  overflow-y: auto;
+#chatMessages{
+  flex:1;
+  padding:12px;
+  overflow-y:auto;
+  scroll-behavior:smooth;
 }
 
 /* BURBUJAS */
-.msg {
-  max-width: 80%;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  border-radius: 12px;
-  line-height: 1.35;
-  font-size: 14px;
-  white-space: pre-wrap;
+.msg{
+  max-width:80%;
+  padding:8px 12px;
+  margin-bottom:8px;
+  border-radius:12px;
+  font-size:14px;
+  animation:fadeIn .25s ease;
+  white-space:pre-wrap;
+}
+.user{
+  background:#dcf8c6;
+  margin-left:auto;
+  border-bottom-right-radius:2px;
+}
+.bot{
+  background:#fff;
+  margin-right:auto;
+  border-bottom-left-radius:2px;
 }
 
-.user {
-  background: #dcf8c6;
-  margin-left: auto;
-  border-bottom-right-radius: 2px;
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(5px)}
+  to{opacity:1;transform:none}
 }
 
-.bot {
-  background: white;
-  margin-right: auto;
-  border-bottom-left-radius: 2px;
+/* ESCRIBIENDO */
+.typing{
+  font-size:12px;
+  color:#555;
+  margin-bottom:6px;
 }
 
 /* VIDEO */
-.msg video, .msg iframe {
-  width: 100%;
-  margin-top: 8px;
-  border-radius: 10px;
+.msg video,.msg iframe{
+  width:100%;
+  margin-top:8px;
+  border-radius:10px;
 }
 
 /* PAGINACIÓN */
-.navBtns {
-  display: flex;
-  gap: 8px;
-  margin-top: 6px;
+.navBtns{
+  display:flex;
+  gap:6px;
+  margin-top:6px;
 }
-
-.navBtns button {
-  flex: 1;
-  border: none;
-  padding: 6px;
-  border-radius: 8px;
-  cursor: pointer;
-  background: #075e54;
-  color: white;
-  font-size: 12px;
+.navBtns button{
+  flex:1;
+  border:none;
+  background:#075e54;
+  color:#fff;
+  padding:6px;
+  font-size:12px;
+  border-radius:8px;
+  cursor:pointer;
 }
 
 /* INPUT */
-#chatInputBox {
-  display: flex;
-  border-top: 1px solid #ccc;
-  background: #f0f0f0;
+#chatInputBox{
+  display:flex;
+  background:#f0f0f0;
+  border-top:1px solid #ccc;
+}
+#chatInput{
+  flex:1;
+  border:none;
+  padding:10px;
+  font-size:14px;
+}
+#sendBtn{
+  border:none;
+  padding:0 16px;
+  background:#075e54;
+  color:#fff;
+  font-size:16px;
+  cursor:pointer;
 }
 
-#chatInput {
-  flex: 1;
-  border: none;
-  padding: 10px;
-  font-size: 14px;
+/* QUICK FAQ */
+#quickFaq{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  padding:8px;
+  background:#f7f7f7;
 }
-
-#sendBtn {
-  border: none;
-  padding: 0 16px;
-  background: #075e54;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
+#quickFaq button{
+  border:none;
+  background:#e0e0e0;
+  padding:6px 10px;
+  border-radius:14px;
+  font-size:12px;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -138,108 +164,120 @@ body {
 <button id="chatBtn">💬</button>
 
 <div id="chatBox">
-  <div id="chatHeader">Asistente INDARELÍN</div>
+  <div id="chatHeader">
+    <span>Asistente INDARELÍN</span>
+    <span style="cursor:pointer" onclick="toggleChat()">✖</span>
+  </div>
+
+  <div id="quickFaq">
+    <button onclick="quick('¿Cómo me registro?')">Registro</button>
+    <button onclick="quick('Requisitos del trámite')">Requisitos</button>
+    <button onclick="quick('Costo del trámite')">Costos</button>
+    <button onclick="quick('Horario de atención')">Horario</button>
+  </div>
+
   <div id="chatMessages"></div>
+
   <div id="chatInputBox">
-    <input id="chatInput" placeholder="Escribe tu mensaje…" />
+    <input id="chatInput" placeholder="Escribe tu mensaje…">
     <button id="sendBtn">➤</button>
   </div>
 </div>
 
 <script>
-const API_URL = "/chat";
-const chatBtn = document.getElementById("chatBtn");
-const chatBox = document.getElementById("chatBox");
-const chatMessages = document.getElementById("chatMessages");
-const chatInput = document.getElementById("chatInput");
+const API_URL="/chat";
+const chatBtn=document.getElementById("chatBtn");
+const chatBox=document.getElementById("chatBox");
+const chatMessages=document.getElementById("chatMessages");
+const chatInput=document.getElementById("chatInput");
 
-chatBtn.onclick = () => {
-  chatBox.style.display = chatBox.style.display === "flex" ? "none" : "flex";
-};
+chatBtn.onclick=toggleChat;
+function toggleChat(){
+  chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
+}
 
-function addMsg(text, cls, videoUrl=null) {
-  const div = document.createElement("div");
-  div.className = "msg " + cls;
+function quick(text){
+  chatInput.value=text;
+  send();
+}
 
-  // PAGINACIÓN SOLO SI ES LARGO
-  const MAX = 500;
-  if (cls === "bot" && text.length > MAX) {
-    const pages = [];
-    for (let i = 0; i < text.length; i += MAX) {
-      pages.push(text.slice(i, i + MAX));
-    }
-    let page = 0;
+function addMsg(text,cls,video=null){
+  const div=document.createElement("div");
+  div.className="msg "+cls;
 
-    const content = document.createElement("div");
-    content.textContent = pages[page];
-
-    const nav = document.createElement("div");
-    nav.className = "navBtns";
-
-    const prev = document.createElement("button");
-    prev.textContent = "⬅ Atrás";
-    prev.onclick = () => {
-      if (page > 0) {
-        page--;
-        content.textContent = pages[page];
-      }
-    };
-
-    const next = document.createElement("button");
-    next.textContent = "Siguiente ➡";
-    next.onclick = () => {
-      if (page < pages.length - 1) {
-        page++;
-        content.textContent = pages[page];
-      }
-    };
-
-    nav.append(prev, next);
-    div.append(content, nav);
-  } else {
-    div.textContent = text;
+  const MAX=500;
+  if(cls==="bot" && text.length>MAX){
+    const pages=[];
+    for(let i=0;i<text.length;i+=MAX)pages.push(text.slice(i,i+MAX));
+    let p=0;
+    const cont=document.createElement("div");
+    cont.textContent=pages[p];
+    const nav=document.createElement("div");
+    nav.className="navBtns";
+    const prev=document.createElement("button");
+    prev.textContent="⬅ Atrás";
+    prev.onclick=()=>{if(p>0){p--;cont.textContent=pages[p];}};
+    const next=document.createElement("button");
+    next.textContent="Siguiente ➡";
+    next.onclick=()=>{if(p<pages.length-1){p++;cont.textContent=pages[p];}};
+    nav.append(prev,next);
+    div.append(cont,nav);
+  }else{
+    div.textContent=text;
   }
 
-  // VIDEO
-  if (videoUrl) {
-    if (videoUrl.includes("youtube")) {
-      const iframe = document.createElement("iframe");
-      iframe.src = videoUrl;
-      iframe.allowFullscreen = true;
-      div.appendChild(iframe);
-    } else {
-      const video = document.createElement("video");
-      video.src = videoUrl;
-      video.controls = true;
-      div.appendChild(video);
+  if(video){
+    if(video.includes("youtube")||video.includes("embed")){
+      const i=document.createElement("iframe");
+      i.src=video;i.allowFullscreen=true;
+      div.appendChild(i);
+    }else{
+      const v=document.createElement("video");
+      v.src=video;v.controls=true;
+      div.appendChild(v);
     }
   }
 
   chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  chatMessages.scrollTop=chatMessages.scrollHeight;
 }
 
-async function send() {
-  const msg = chatInput.value.trim();
-  if (!msg) return;
-  chatInput.value = "";
-  addMsg(msg, "user");
+let typingEl=null;
+function showTyping(){
+  typingEl=document.createElement("div");
+  typingEl.className="typing";
+  typingEl.textContent="Asistente está escribiendo…";
+  chatMessages.appendChild(typingEl);
+  chatMessages.scrollTop=chatMessages.scrollHeight;
+}
+function hideTyping(){
+  if(typingEl)typingEl.remove();
+  typingEl=null;
+}
 
-  try {
-    const r = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: msg })
+async function send(){
+  const msg=chatInput.value.trim();
+  if(!msg)return;
+  chatInput.value="";
+  addMsg(msg,"user");
+  showTyping();
+  try{
+    const r=await fetch(API_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({message:msg})
     });
-    const d = await r.json();
-    addMsg(d.reply || "Sin respuesta", "bot", d.videoUrl || null);
-  } catch {
-    addMsg("Error de conexión. Intenta más tarde.", "bot");
+    const d=await r.json();
+    hideTyping();
+    addMsg(d.reply||"Sin respuesta","bot",d.videoUrl||null);
+  }catch{
+    hideTyping();
+    addMsg("⚠️ En este momento el servicio no está disponible. Intenta más tarde.","bot");
   }
 }
 
-document.getElementById("sendBtn").onclick = send;
-chatInput.addEventListener("keydown", e => e.key === "Enter" && send());
+sendBtn.onclick=send;
+chatInput.addEventListener("keydown",e=>e.key==="Enter"&&send());
 </script>
 
 </body>
