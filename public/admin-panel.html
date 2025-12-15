@@ -2,37 +2,108 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Login Admin INDARELÍN</title>
+  <title>Panel Administrativo INDARELÍN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- CSS PRINCIPAL -->
+  <link rel="stylesheet" href="/admin.css" />
+
+  <!-- ChartJS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
-  <h2>Acceso Administrativo</h2>
 
-  <input id="user" placeholder="Usuario" />
-  <br /><br />
-  <input id="pass" type="password" placeholder="Contraseña" />
-  <br /><br />
-  <button onclick="login()">Entrar</button>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">🏛️</span>
+    <div>
+      <strong>INDARELÍN</strong>
+      <div class="subtitle">Panel Administrativo</div>
+    </div>
+  </div>
 
-  <script>
-    async function login() {
-      const res = await fetch("/admin-auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: user.value,
-          password: pass.value,
-        }),
-      });
+  <div class="userbox">
+    <span id="whoUser">—</span>
+    <button class="btn danger" onclick="logout()">Salir</button>
+  </div>
+</header>
 
-      const data = await res.json();
+<div class="layout">
+  <aside class="sidebar">
+    <button class="navbtn active" onclick="showTab('dashboard')">📊 Dashboard</button>
+    <button class="navbtn" onclick="showTab('messages')">💬 Mensajes</button>
+    <button class="navbtn" onclick="showTab('custom')">🧠 Respuestas</button>
+    <button class="navbtn" onclick="showTab('users')">👤 Usuarios</button>
+    <button class="navbtn" onclick="showTab('security')">🔒 Seguridad</button>
+  </aside>
 
-      if (data.token) {
-        localStorage.token = data.token;
-        location.href = "/admin.html";
-      } else {
-        alert(data.error || "Error de login");
-      }
-    }
-  </script>
+  <main class="content">
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="tab active">
+      <h2>Dashboard</h2>
+      <div class="grid">
+        <div class="card"><h3>Total mensajes</h3><p id="totalMessages">0</p></div>
+        <div class="card"><h3>IPs únicas</h3><p id="totalIPs">0</p></div>
+        <div class="card"><h3>Consultas hoy</h3><p id="todayMessages">0</p></div>
+      </div>
+      <canvas id="chart" height="100"></canvas>
+    </section>
+
+    <!-- MENSAJES -->
+    <section id="messages" class="tab">
+      <h2>Historial de mensajes</h2>
+      <table>
+        <thead>
+          <tr><th>Rol</th><th>Mensaje</th><th>Fecha</th></tr>
+        </thead>
+        <tbody id="messagesTable"></tbody>
+      </table>
+    </section>
+
+    <!-- RESPUESTAS -->
+    <section id="custom" class="tab">
+      <h2>Respuestas personalizadas</h2>
+      <button class="btn">📥 Exportar</button>
+      <table>
+        <thead>
+          <tr><th>Trigger</th><th>Prioridad</th><th>Activo</th></tr>
+        </thead>
+        <tbody id="customTable"></tbody>
+      </table>
+    </section>
+
+    <!-- USUARIOS -->
+    <section id="users" class="tab">
+      <h2>Usuarios admin</h2>
+      <input id="newUser" placeholder="Usuario" />
+      <input id="newPass" type="password" placeholder="Contraseña" />
+      <button class="btn success">Crear usuario</button>
+      <table>
+        <thead>
+          <tr><th>Usuario</th><th>Rol</th><th>Activo</th></tr>
+        </thead>
+        <tbody id="usersTable"></tbody>
+      </table>
+    </section>
+
+    <!-- SEGURIDAD -->
+    <section id="security" class="tab">
+      <h2>Seguridad (IPs)</h2>
+      <input id="ipBlock" placeholder="IP a bloquear" />
+      <button class="btn danger">Bloquear</button>
+      <table>
+        <thead>
+          <tr><th>IP</th><th>Estado</th></tr>
+        </thead>
+        <tbody id="ipsTable"></tbody>
+      </table>
+    </section>
+
+  </main>
+</div>
+
+<script src="/admin.js"></script>
 </body>
 </html>
