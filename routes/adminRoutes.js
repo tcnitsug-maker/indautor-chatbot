@@ -121,36 +121,52 @@ router.get("/messages/export-csv", requireRole("support"), async (req, res) => {
   }
 });
 
-
 // =======================================================================
 // 3. GET /admin/messages/export-xlsx → Exportar XLSX
 // =======================================================================
-router.get("/messages/export-xlsx", requireRole("support"), async (req, res) => {
-  try {
-    const filter = buildMessageFilter(req.query);
-    const rows = await Message.find(filter).sort({ createdAt: -1 }).lean();
+router.get(
+  "/messages/export-xlsx",
+  requireRole(["support", "analyst", "editor", "super"]),
+  async (req, res) => {
+    try {
+      const filter = buildMessageFilter(req.query);
+      const rows = await Message.find(filter)
+        .sort({ createdAt: -1 })
+        .lean();
 
-    const data = rows.map(r => ({
-      Fecha: r.createdAt ? new Date(r.createdAt).toISOString() : "",
-      Rol: r.role,
-      Mensaje: r.text || r.message,
-      IP: r.ip || "",
-      Fuente: r.source || "",
-    }));
+      const data = rows.map(r => ({
+        Fecha: r.createdAt ? new Date(r.createdAt).toISOString() : "",
+        Rol: r.role || "",
+        Mensaje: r.text || r.message || "",
+        IP: r.ip || "",
+        Fuente: r.source || "",
+      }));
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, ws, "Mensajes");
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "Mensajes");
 
-    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", "attachment; filename=historial_mensajes.xlsx");
-    res.send(buf);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Error exportando XLSX" });
+      const buffer = XLSX.write(wb, {
+        type: "buffer",
+        bookType: "xlsx",
+      });
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="historial_chat.xlsx"'
+      );
+
+      res.send(buffer);
+    } catch (err) {
+      console.error("Error exportando XLSX:", err);
+      res.status(500).json({ error: "No se pudo exportar XLSX" });
+    }
   }
-});
+);
 
 // =======================================================================
 // 4. REPORTES EXCEL (Usuarios, IPs) - Solo Super Admin
