@@ -61,14 +61,23 @@ function similarity(a, b) {
 function getVideoForReply(text = "") {
   const t = text.toLowerCase();
 
-  if (t.includes("registro de obra")) {
-    return "https://utneza.store/videos/registro_obra_indautor.mp4";
+  if (t.includes("registrarme en INDARELIN")) {
+    return "https://youtu.be/NaDQ1HK4hjk";
   }
-  if (t.includes("reserva de derechos")) {
-    return "https://utneza.store/videos/reserva_derechos_indautor.mp4";
+  if (t.includes("como desahogar un tramite")) {
+    return "https://youtu.be/0-u1o0T4Hfs";
   }
-  if (t.includes("inscripcion de contrato")) {
-    return "https://utneza.store/videos/inscripcion_contrato_indautor.mp4";
+  if (t.includes("Modifica tu información")) {
+    return "https://youtu.be/Zl_qTv9WJJk";
+  }
+  if (t.includes("Alta de representantes legales")) {
+    return "https://youtu.be/gnzDyWSwCQs";
+  }
+   if (t.includes("Registra a tus títulares")) {
+    return "https://youtu.be/pKs-mFPPEZE";
+  }
+    if (t.includes("Registra tus autores, productores y editores")) {
+    return "https://youtu.be/sPH6AtE0A_8";
   }
 
   return null;
