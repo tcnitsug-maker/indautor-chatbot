@@ -37,6 +37,47 @@ async function setSetting(key, value) {
     { upsert: true }
   );
 }
+async function askAIWithFallback(msg) {
+  const turn = await getSetting("ai_turn", "gemini");
+  const first = turn === "gemini" ? "gemini" : "openai";
+  const second = first === "gemini" ? "openai" : "gemini";
+
+  // Guardamos el siguiente turno para alternar
+  await setSetting("ai_turn", second);
+
+  // 1️⃣ INTENTO PRINCIPAL
+  try {
+    if (first === "gemini") {
+      const reply = await askGemini(msg);
+      if (reply) return { reply, source: "gemini" };
+    } else {
+      const reply = await askOpenAI(msg);
+      if (reply) return { reply, source: "openai" };
+    }
+  } catch (e) {
+    console.warn(`⚠️ ${first} falló, intentando fallback...`);
+  }
+
+  // 2️⃣ FALLBACK AUTOMÁTICO
+  try {
+    if (second === "gemini") {
+      const reply = await askGemini(msg);
+      if (reply) return { reply, source: "gemini" };
+    } else {
+      const reply = await askOpenAI(msg);
+      if (reply) return { reply, source: "openai" };
+    }
+  } catch (e) {
+    console.error("❌ Ambas IA fallaron");
+  }
+
+  // 3️⃣ SI AMBAS FALLAN
+  return {
+    reply: "En este momento nuestros servicios de inteligencia artificial no están disponibles. Intenta nuevamente más tarde.",
+    source: "unavailable"
+  };
+}
+
 
 /* =========================================================
    ⭐ MATCHING FUZZY (CUSTOM REPLIES)
@@ -157,9 +198,9 @@ async function askAIAlternating(msg) {
   }
 }
 
-/* =========================================================
-   🚀 ENDPOINT PRINCIPAL
-========================================================= */
+// =============================
+// CHAT PRINCIPAL
+// =============================
 exports.sendChat = async (req, res) => {
   try {
     const ip =
@@ -168,7 +209,7 @@ exports.sendChat = async (req, res) => {
 
     const userMsg = String(req.body?.message || "").trim();
     if (!userMsg) {
-      return res.json({ reply: "Falta el mensaje." });
+      return res.status(400).json({ reply: "Falta el mensaje." });
     }
 
     const blocked = await BlockedIP.findOne({ ip, active: true }).lean();
@@ -185,27 +226,27 @@ exports.sendChat = async (req, res) => {
       source: "user"
     });
 
-    /* ========= PRIORIDAD: CUSTOM REPLY ========= */
+    // 1️⃣ RESPUESTAS PERSONALIZADAS (PRIORIDAD)
     const custom = await findCustomReply(userMsg);
     if (custom) {
+      const videoUrl = getVideoForReply(custom.reply);
       await Message.create({
         role: "bot",
         text: custom.reply,
         ip,
         source: "custom"
       });
-
       return res.json({
         reply: custom.reply,
-        type: custom.type,
-        videoUrl: custom.type === "video" ? custom.videoUrl : null,
-        source: custom.source,
-        matchScore: custom.score
+        source: "custom",
+        matchScore: custom.matchScore,
+        videoUrl
       });
     }
 
-    /* ========= IA ========= */
-    const ai = await askAIAlternating(userMsg);
+    // 2️⃣ IA CON FALLBACK AUTOMÁTICO
+    const ai = await askAIWithFallback(userMsg);
+    const videoUrl = getVideoForReply(ai.reply);
 
     await Message.create({
       role: "bot",
@@ -216,12 +257,12 @@ exports.sendChat = async (req, res) => {
 
     return res.json({
       reply: ai.reply,
-      type: "text",
-      source: ai.source
+      source: ai.source,
+      videoUrl
     });
 
-  } catch (e) {
-    console.error("CHAT ERROR:", e);
+  } catch (err) {
+    console.error("CHAT ERROR:", err);
     return res.status(500).json({
       reply: "Estamos experimentando un problema técnico. Intenta nuevamente."
     });
