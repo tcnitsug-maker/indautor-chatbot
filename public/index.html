@@ -440,15 +440,17 @@ async function send(){
     .map(x => ({ role: x.role === "bot" ? "assistant" : "user", content: x.text }));
 
   try{
-    const r = await fetch(API_URL, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        message: msg,
-        lang: LANG,
-        history
-      })
-    });
+    const r = await fetch("/chat", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    message: userText,
+    lang: currentLang,     // "es" o "en"
+    history: chatHistory   // array de mensajes previos
+  })
+});
 
     const d = await r.json().catch(()=>({}));
     hideTyping();
