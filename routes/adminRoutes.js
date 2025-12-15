@@ -285,7 +285,18 @@ router.get("/custom-replies/template-xlsx", requireRole("analyst"), async (req, 
 // =======================================================================
 const excelUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok =
+      file.mimetype === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      file.mimetype === "application/vnd.ms-excel" ||
+      file.mimetype === "text/csv";
+
+    if (!ok) {
+      return cb(new Error("Formato no soportado"));
+    }
+    cb(null, true);
+  }
 });
 
 router.post(
