@@ -903,5 +903,51 @@ router.put("/settings/ai-limit", requireRole("super"), async (req, res) => {
     res.status(500).json({ error: "Error guardando setting" });
   }
 });
+// =====================
+// METRICS DASHBOARD
+// =====================
+router.get("/metrics", async (req, res) => {
+  try {
+    const totalMessages = await Message.countDocuments();
+    const totalIPs = await Message.distinct("ip").then(r => r.length);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todayMessages = await Message.countDocuments({
+      createdAt: { $gte: today }
+    });
+
+    // últimos 7 días
+    const labels = [];
+    const values = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const d1 = new Date();
+      d1.setDate(d1.getDate() - i);
+      d1.setHours(0, 0, 0, 0);
+
+      const d2 = new Date(d1);
+      d2.setHours(23, 59, 59, 999);
+
+      labels.push(d1.toLocaleDateString());
+      values.push(
+        await Message.countDocuments({
+          createdAt: { $gte: d1, $lte: d2 }
+        })
+      );
+    }
+
+    res.json({
+      totalMessages,
+      totalIPs,
+      todayMessages,
+      chart: { labels, values }
+    });
+  } catch (e) {
+    console.error("metrics error:", e);
+    res.status(500).json({ error: "No se pudieron cargar métricas" });
+  }
+});
 
 module.exports = router;
