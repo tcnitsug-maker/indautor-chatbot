@@ -1239,26 +1239,3 @@ function scrollToCreateUser() {
   const el = document.getElementById("newUserUsername") || document.getElementById("newUsername");
   if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
 }
-function exportHistorialXLSX() {
-  fetch("https://indautor-chatbot-1.onrender.com/admin/messages/export-xlsx", {
-    headers: {
-      Authorization: "Bearer " + localStorage.getItem("adminToken")
-    }
-  })
-  .then(res => {
-    if (!res.ok) throw new Error("No autorizado");
-    return res.blob();
-  })
-  .then(blob => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "historial_chat.xlsx";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  })
-  .catch(err => alert(err.message));
-}
-

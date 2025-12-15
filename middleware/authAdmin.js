@@ -1,13 +1,15 @@
 const jwt = require("jsonwebtoken");
 
+// Orden de permisos (de menor a mayor)
 const ROLE_ORDER = ["support","viewer","analyst","admin","editor","superadmin","super"];
 
+// Compatibilidad con roles antiguos / equivalencias
 function normalizeRole(role) {
   if (!role) return "support";
   const r = String(role).toLowerCase();
-  if (r === "viewer") return "analyst";
-  if (r === "admin") return "editor";
-  if (r === "superadmin") return "super";
+  if (r === "viewer") return "analyst";   // antiguo viewer => analista (solo lectura)
+  if (r === "admin") return "editor";     // antiguo admin => editor
+  if (r === "superadmin") return "super"; // antiguo superadmin => super
   if (ROLE_ORDER.includes(r)) return r;
   return "support";
 }
@@ -35,11 +37,12 @@ module.exports = function authAdmin(requiredRole = "analyst") {
 
       req.admin = decoded;
       next();
-    } catch {
+    } catch (err) {
       return res.status(401).json({ error: "Token inválido" });
     }
   };
 };
 
+// Export helpers (opcional)
 module.exports.normalizeRole = normalizeRole;
 module.exports.hasRoleAtLeast = hasRoleAtLeast;
