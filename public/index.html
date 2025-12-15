@@ -6,279 +6,507 @@
 <title>Asistente INDARELÍN</title>
 
 <style>
-body {
-  margin:0;
-  font-family:"Segoe UI",Arial,sans-serif;
-  background:#f2f2f2;
-}
+  body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:#f2f2f2}
 
-/* BOTÓN */
-#chatBtn{
-  position:fixed;
-  right:20px;
-  bottom:20px;
-  width:64px;height:64px;
-  border-radius:50%;
-  background:#075e54;
-  color:#fff;
-  border:none;
-  font-size:26px;
-  cursor:pointer;
-  box-shadow:0 8px 20px rgba(0,0,0,.35);
-  z-index:9999;
-}
+  /* BOTÓN */
+  #chatBtn{
+    position:fixed;right:20px;bottom:20px;width:64px;height:64px;border-radius:50%;
+    background:#075e54;color:#fff;border:none;font-size:26px;cursor:pointer;
+    box-shadow:0 8px 20px rgba(0,0,0,.35);z-index:9999;
+  }
 
-/* CHAT */
-#chatBox{
-  position:fixed;
-  right:20px;
-  bottom:100px;
-  width:360px;
-  max-height:540px;
-  background:#e5ddd5;
-  border-radius:14px;
-  display:none;
-  flex-direction:column;
-  overflow:hidden;
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
-  z-index:9999;
-}
+  /* CHAT */
+  #chatBox{
+    position:fixed;right:20px;bottom:100px;width:380px;max-height:600px;
+    background:#e5ddd5;border-radius:14px;display:none;flex-direction:column;
+    overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:9999;
+  }
 
-/* HEADER */
-#chatHeader{
-  background:#075e54;
-  color:#fff;
-  padding:10px;
-  font-weight:600;
-  display:flex;
-  justify-content:space-between;
-}
+  /* HEADER */
+  #chatHeader{
+    background:#075e54;color:#fff;padding:10px;font-weight:600;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+  }
+  #chatHeader .left{display:flex;align-items:center;gap:10px}
+  #chatHeader .right{display:flex;align-items:center;gap:8px}
+  #closeBtn{cursor:pointer;opacity:.95}
+  #closeBtn:hover{opacity:1}
 
-/* MENSAJES */
-#chatMessages{
-  flex:1;
-  padding:12px;
-  overflow-y:auto;
-  scroll-behavior:smooth;
-}
+  /* Controls in header */
+  .chip{
+    border:none;background:rgba(255,255,255,.18);color:#fff;
+    padding:6px 10px;border-radius:999px;font-size:12px;cursor:pointer;
+  }
+  .chip:hover{background:rgba(255,255,255,.24)}
+  .langSelect{
+    border:none;border-radius:999px;padding:6px 10px;font-size:12px;
+    background:rgba(255,255,255,.18);color:#fff;outline:none;cursor:pointer;
+  }
+  .langSelect option{color:#111}
 
-/* BURBUJAS */
-.msg{
-  max-width:80%;
-  padding:8px 12px;
-  margin-bottom:8px;
-  border-radius:12px;
-  font-size:14px;
-  animation:fadeIn .25s ease;
-  white-space:pre-wrap;
-}
-.user{
-  background:#dcf8c6;
-  margin-left:auto;
-  border-bottom-right-radius:2px;
-}
-.bot{
-  background:#fff;
-  margin-right:auto;
-  border-bottom-left-radius:2px;
-}
+  /* FAQ */
+  #quickFaq{
+    display:flex;gap:6px;flex-wrap:wrap;padding:8px;background:#f7f7f7;
+    border-bottom:1px solid rgba(0,0,0,.06);
+  }
+  #quickFaq button{
+    border:none;background:#e0e0e0;padding:6px 10px;border-radius:14px;
+    font-size:12px;cursor:pointer;
+  }
+  #quickFaq button:hover{opacity:.9}
 
-@keyframes fadeIn{
-  from{opacity:0;transform:translateY(5px)}
-  to{opacity:1;transform:none}
-}
+  /* MENSAJES */
+  #chatMessages{
+    flex:1;padding:12px;overflow-y:auto;scroll-behavior:smooth;
+  }
+  .msg{
+    max-width:82%;padding:8px 12px;margin-bottom:8px;border-radius:12px;
+    font-size:14px;animation:fadeIn .25s ease;white-space:pre-wrap;line-height:1.35;
+    box-shadow:0 1px 0 rgba(0,0,0,.06);
+  }
+  .user{background:#dcf8c6;margin-left:auto;border-bottom-right-radius:2px}
+  .bot{background:#fff;margin-right:auto;border-bottom-left-radius:2px}
+  .sys{background:#fff3cd;margin:0 auto;max-width:92%;border-radius:12px;font-size:12px}
 
-/* ESCRIBIENDO */
-.typing{
-  font-size:12px;
-  color:#555;
-  margin-bottom:6px;
-}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 
-/* VIDEO */
-.msg video,.msg iframe{
-  width:100%;
-  margin-top:8px;
-  border-radius:10px;
-}
+  /* ESCRIBIENDO */
+  .typing{font-size:12px;color:#555;margin:6px 0}
 
-/* PAGINACIÓN */
-.navBtns{
-  display:flex;
-  gap:6px;
-  margin-top:6px;
-}
-.navBtns button{
-  flex:1;
-  border:none;
-  background:#075e54;
-  color:#fff;
-  padding:6px;
-  font-size:12px;
-  border-radius:8px;
-  cursor:pointer;
-}
+  /* VIDEO */
+  .msg video,.msg iframe{width:100%;margin-top:8px;border-radius:10px;max-height:360px}
 
-/* INPUT */
-#chatInputBox{
-  display:flex;
-  background:#f0f0f0;
-  border-top:1px solid #ccc;
-}
-#chatInput{
-  flex:1;
-  border:none;
-  padding:10px;
-  font-size:14px;
-}
-#sendBtn{
-  border:none;
-  padding:0 16px;
-  background:#075e54;
-  color:#fff;
-  font-size:16px;
-  cursor:pointer;
-}
+  /* PAGINACIÓN */
+  .navBtns{display:flex;gap:6px;margin-top:6px}
+  .navBtns button{
+    flex:1;border:none;background:#075e54;color:#fff;padding:6px;
+    font-size:12px;border-radius:8px;cursor:pointer;
+  }
 
-/* QUICK FAQ */
-#quickFaq{
-  display:flex;
-  gap:6px;
-  flex-wrap:wrap;
-  padding:8px;
-  background:#f7f7f7;
-}
-#quickFaq button{
-  border:none;
-  background:#e0e0e0;
-  padding:6px 10px;
-  border-radius:14px;
-  font-size:12px;
-  cursor:pointer;
-}
+  /* INPUT */
+  #chatInputBox{
+    display:flex;align-items:center;gap:8px;background:#f0f0f0;border-top:1px solid #ccc;
+    padding:8px;
+  }
+  #chatInput{
+    flex:1;border:none;padding:10px;font-size:14px;border-radius:12px;outline:none;
+  }
+  #sendBtn,#micBtn{
+    border:none;background:#075e54;color:#fff;cursor:pointer;border-radius:12px;
+    width:44px;height:44px;font-size:18px;display:flex;align-items:center;justify-content:center;
+  }
+  #sendBtn:hover,#micBtn:hover{opacity:.92}
+  #micBtn.rec{background:#b00020}
+  #micHint{font-size:12px;color:#444;padding:0 12px 10px;display:none}
+
+  /* Responsive */
+  @media (max-width: 440px){
+    #chatBox{right:10px;left:10px;width:auto}
+    #chatBtn{right:14px;bottom:14px}
+  }
 </style>
 </head>
 
 <body>
+<button id="chatBtn" aria-label="Abrir chat">💬</button>
 
-<button id="chatBtn">💬</button>
-
-<div id="chatBox">
+<div id="chatBox" role="dialog" aria-label="Chat">
   <div id="chatHeader">
-    <span>Asistente INDARELÍN</span>
-    <span style="cursor:pointer" onclick="toggleChat()">✖</span>
+    <div class="left">
+      <span id="chatTitle">Asistente INDARELÍN</span>
+    </div>
+    <div class="right">
+      <select id="langSelect" class="langSelect" title="Idioma">
+        <option value="es">ES</option>
+        <option value="en">EN</option>
+      </select>
+      <button id="clearBtn" class="chip" title="Limpiar chat">🧹</button>
+      <span id="closeBtn" class="chip" title="Cerrar">✖</span>
+    </div>
   </div>
 
-  <div id="quickFaq">
-    <button onclick="quick('¿Cómo me registro?')">Registro</button>
-    <button onclick="quick('Requisitos del trámite')">Requisitos</button>
-    <button onclick="quick('Costo del trámite')">Costos</button>
-    <button onclick="quick('Horario de atención')">Horario</button>
-  </div>
+  <div id="quickFaq"></div>
 
   <div id="chatMessages"></div>
+  <div id="micHint"></div>
 
   <div id="chatInputBox">
+    <button id="micBtn" title="Voz a texto">🎙</button>
     <input id="chatInput" placeholder="Escribe tu mensaje…">
-    <button id="sendBtn">➤</button>
+    <button id="sendBtn" title="Enviar">➤</button>
   </div>
 </div>
 
 <script>
-const API_URL="/chat";
-const chatBtn=document.getElementById("chatBtn");
-const chatBox=document.getElementById("chatBox");
-const chatMessages=document.getElementById("chatMessages");
-const chatInput=document.getElementById("chatInput");
+/* =========================================================
+   CONFIG
+========================================================= */
+const API_URL = "/chat";
+const SESSION_KEY = "indarelin_chat_session_v1";
 
-chatBtn.onclick=toggleChat;
+/* =========================================================
+   I18N (Multiidioma)
+========================================================= */
+const I18N = {
+  es: {
+    title: "Asistente INDARELÍN",
+    placeholder: "Escribe tu mensaje…",
+    typing: "Asistente está escribiendo…",
+    unavailable: "⚠️ En este momento el servicio no está disponible. Intenta más tarde.",
+    cleared: "🧹 Conversación limpiada.",
+    mic_on: "🎙 Escuchando… habla ahora.",
+    mic_off: "🎙 Dictado detenido.",
+    mic_no: "Tu navegador no soporta voz a texto (Web Speech API). Usa Chrome/Edge.",
+    faq: [
+      { label: "Registro", text: "¿Cómo me registro en INDARELÍN?" },
+      { label: "Requisitos", text: "¿Cuáles son los requisitos del trámite?" },
+      { label: "Costos", text: "¿Cuánto cuesta el trámite?" },
+      { label: "Horario", text: "¿Cuál es el horario de atención?" }
+    ],
+    sys_welcome: "Hola 👋 Soy tu asistente. Puedo ayudarte con trámites, requisitos, costos y guías."
+  },
+  en: {
+    title: "INDARELÍN Assistant",
+    placeholder: "Type your message…",
+    typing: "Assistant is typing…",
+    unavailable: "⚠️ Service is temporarily unavailable. Please try again later.",
+    cleared: "🧹 Conversation cleared.",
+    mic_on: "🎙 Listening… speak now.",
+    mic_off: "🎙 Dictation stopped.",
+    mic_no: "Your browser does not support speech-to-text (Web Speech API). Use Chrome/Edge.",
+    faq: [
+      { label: "Sign up", text: "How do I sign up for INDARELÍN?" },
+      { label: "Requirements", text: "What are the requirements for the procedure?" },
+      { label: "Costs", text: "How much does the procedure cost?" },
+      { label: "Hours", text: "What are the service hours?" }
+    ],
+    sys_welcome: "Hi 👋 I'm your assistant. I can help with procedures, requirements, costs, and guides."
+  }
+};
+
+function guessLang(){
+  const nav = (navigator.language || "es").toLowerCase();
+  return nav.startsWith("en") ? "en" : "es";
+}
+
+let LANG = localStorage.getItem("chat_lang") || guessLang();
+
+/* =========================================================
+   DOM
+========================================================= */
+const chatBtn = document.getElementById("chatBtn");
+const chatBox = document.getElementById("chatBox");
+const chatMessages = document.getElementById("chatMessages");
+const chatInput = document.getElementById("chatInput");
+const sendBtn = document.getElementById("sendBtn");
+const micBtn = document.getElementById("micBtn");
+const micHint = document.getElementById("micHint");
+const quickFaq = document.getElementById("quickFaq");
+const langSelect = document.getElementById("langSelect");
+const chatTitle = document.getElementById("chatTitle");
+const closeBtn = document.getElementById("closeBtn");
+const clearBtn = document.getElementById("clearBtn");
+
+/* =========================================================
+   Session Memory (frontend)
+========================================================= */
+function loadSession(){
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "[]"); }
+  catch { return []; }
+}
+function saveSession(arr){
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(arr.slice(-80))); // limita memoria local
+}
+let session = loadSession();
+
+/* =========================================================
+   UI helpers
+========================================================= */
 function toggleChat(){
-  chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
+  chatBox.style.display = (chatBox.style.display === "flex") ? "none" : "flex";
+  if(chatBox.style.display === "flex"){
+    chatInput.focus();
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
 }
 
-function quick(text){
-  chatInput.value=text;
-  send();
-}
+function addMsg(text, cls, videoUrl=null, persist=true){
+  const div = document.createElement("div");
+  div.className = "msg " + cls;
 
-function addMsg(text,cls,video=null){
-  const div=document.createElement("div");
-  div.className="msg "+cls;
+  // PAGINACIÓN SOLO SI ES LARGO (bot)
+  const MAX = 520;
+  if(cls === "bot" && (text||"").length > MAX){
+    const pages = [];
+    for(let i=0;i<text.length;i+=MAX) pages.push(text.slice(i,i+MAX));
+    let page = 0;
 
-  const MAX=500;
-  if(cls==="bot" && text.length>MAX){
-    const pages=[];
-    for(let i=0;i<text.length;i+=MAX)pages.push(text.slice(i,i+MAX));
-    let p=0;
-    const cont=document.createElement("div");
-    cont.textContent=pages[p];
-    const nav=document.createElement("div");
-    nav.className="navBtns";
-    const prev=document.createElement("button");
-    prev.textContent="⬅ Atrás";
-    prev.onclick=()=>{if(p>0){p--;cont.textContent=pages[p];}};
-    const next=document.createElement("button");
-    next.textContent="Siguiente ➡";
-    next.onclick=()=>{if(p<pages.length-1){p++;cont.textContent=pages[p];}};
+    const content = document.createElement("div");
+    content.textContent = pages[page];
+
+    const nav = document.createElement("div");
+    nav.className = "navBtns";
+
+    const prev = document.createElement("button");
+    prev.textContent = (LANG==="en" ? "⬅ Back" : "⬅ Atrás");
+    prev.onclick = () => {
+      if(page>0){ page--; content.textContent = pages[page]; }
+    };
+
+    const next = document.createElement("button");
+    next.textContent = (LANG==="en" ? "Next ➡" : "Siguiente ➡");
+    next.onclick = () => {
+      if(page<pages.length-1){ page++; content.textContent = pages[page]; }
+    };
+
     nav.append(prev,next);
-    div.append(cont,nav);
+    div.append(content,nav);
   }else{
-    div.textContent=text;
+    div.textContent = text || "";
   }
 
-  if(video){
-    if(video.includes("youtube")||video.includes("embed")){
-      const i=document.createElement("iframe");
-      i.src=video;i.allowFullscreen=true;
-      div.appendChild(i);
-    }else{
-      const v=document.createElement("video");
-      v.src=video;v.controls=true;
-      div.appendChild(v);
+  // VIDEO embebido si llega
+  if(videoUrl){
+    const v = String(videoUrl);
+    if(v.includes("youtube.com") || v.includes("youtu.be") || v.includes("/embed/")){
+      // Si viene youtu.be, conviértelo (lo más simple: dejarlo tal cual)
+      const iframe = document.createElement("iframe");
+      iframe.src = v.includes("/embed/") ? v : v; // si ya envías embed desde panel, perfecto
+      iframe.allowFullscreen = true;
+      iframe.style.border = "0";
+      div.appendChild(iframe);
+    } else {
+      const video = document.createElement("video");
+      video.src = v;
+      video.controls = true;
+      div.appendChild(video);
     }
   }
 
   chatMessages.appendChild(div);
-  chatMessages.scrollTop=chatMessages.scrollHeight;
-}
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 
-let typingEl=null;
-function showTyping(){
-  typingEl=document.createElement("div");
-  typingEl.className="typing";
-  typingEl.textContent="Asistente está escribiendo…";
-  chatMessages.appendChild(typingEl);
-  chatMessages.scrollTop=chatMessages.scrollHeight;
-}
-function hideTyping(){
-  if(typingEl)typingEl.remove();
-  typingEl=null;
-}
-
-async function send(){
-  const msg=chatInput.value.trim();
-  if(!msg)return;
-  chatInput.value="";
-  addMsg(msg,"user");
-  showTyping();
-  try{
-    const r=await fetch(API_URL,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({message:msg})
+  if(persist){
+    session.push({
+      role: cls === "user" ? "user" : (cls === "bot" ? "bot" : "sys"),
+      text: text || "",
+      videoUrl: videoUrl || null,
+      ts: Date.now()
     });
-    const d=await r.json();
-    hideTyping();
-    addMsg(d.reply||"Sin respuesta","bot",d.videoUrl||null);
-  }catch{
-    hideTyping();
-    addMsg("⚠️ En este momento el servicio no está disponible. Intenta más tarde.","bot");
+    saveSession(session);
   }
 }
 
-sendBtn.onclick=send;
-chatInput.addEventListener("keydown",e=>e.key==="Enter"&&send());
+let typingEl = null;
+function showTyping(){
+  typingEl = document.createElement("div");
+  typingEl.className = "typing";
+  typingEl.textContent = I18N[LANG].typing;
+  chatMessages.appendChild(typingEl);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+function hideTyping(){
+  if(typingEl){ typingEl.remove(); typingEl = null; }
+}
+
+function setBusy(b){
+  sendBtn.disabled = b;
+  micBtn.disabled = b;
+  chatInput.disabled = b;
+  sendBtn.style.opacity = b ? 0.7 : 1;
+  micBtn.style.opacity = b ? 0.7 : 1;
+  chatInput.style.opacity = b ? 0.85 : 1;
+}
+
+/* =========================================================
+   Multiidioma apply
+========================================================= */
+function renderFAQ(){
+  quickFaq.innerHTML = "";
+  I18N[LANG].faq.forEach(item=>{
+    const b = document.createElement("button");
+    b.textContent = item.label;
+    b.onclick = ()=>{ chatInput.value = item.text; send(); };
+    quickFaq.appendChild(b);
+  });
+}
+
+function applyLang(){
+  localStorage.setItem("chat_lang", LANG);
+  langSelect.value = LANG;
+  document.documentElement.lang = LANG;
+  chatTitle.textContent = I18N[LANG].title;
+  chatInput.placeholder = I18N[LANG].placeholder;
+  renderFAQ();
+}
+
+langSelect.addEventListener("change", ()=>{
+  LANG = langSelect.value;
+  applyLang();
+  // nota sistema no persistente si no quieres “ruido”: aquí sí persistimos
+  addMsg(LANG==="en" ? "Language set to English." : "Idioma configurado a Español.", "sys", null, true);
+});
+
+/* =========================================================
+   Speech-to-Text (Voz a texto)
+========================================================= */
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+let recOn = false;
+
+function micMessage(msg, show=true){
+  micHint.textContent = msg;
+  micHint.style.display = show ? "block" : "none";
+}
+
+function startRec(){
+  if(!SpeechRecognition){
+    micMessage(I18N[LANG].mic_no, true);
+    addMsg(I18N[LANG].mic_no, "sys");
+    return;
+  }
+  rec = new SpeechRecognition();
+  rec.lang = (LANG === "en") ? "en-US" : "es-MX";
+  rec.interimResults = true;
+  rec.continuous = false;
+
+  let finalText = "";
+
+  rec.onstart = ()=>{
+    recOn = true;
+    micBtn.classList.add("rec");
+    micMessage(I18N[LANG].mic_on, true);
+  };
+
+  rec.onerror = (e)=>{
+    recOn = false;
+    micBtn.classList.remove("rec");
+    micMessage("", false);
+    addMsg((LANG==="en" ? "Mic error: " : "Error de micrófono: ") + (e.error || "unknown"), "sys");
+  };
+
+  rec.onend = ()=>{
+    recOn = false;
+    micBtn.classList.remove("rec");
+    micMessage(I18N[LANG].mic_off, true);
+    setTimeout(()=>micMessage("", false), 1200);
+
+    const t = (finalText || chatInput.value || "").trim();
+    if(t){
+      chatInput.value = t;
+      // NO auto-enviar si no quieres: aquí sí auto-envía para experiencia WhatsApp
+      send();
+    }
+  };
+
+  rec.onresult = (event)=>{
+    let interim = "";
+    for(let i=event.resultIndex;i<event.results.length;i++){
+      const txt = event.results[i][0].transcript;
+      if(event.results[i].isFinal) finalText += txt;
+      else interim += txt;
+    }
+    chatInput.value = (finalText + " " + interim).trim();
+  };
+
+  rec.start();
+}
+
+function stopRec(){
+  try { if(rec) rec.stop(); } catch {}
+}
+
+micBtn.addEventListener("click", ()=>{
+  if(recOn) stopRec();
+  else startRec();
+});
+
+/* =========================================================
+   Send message (with session memory)
+========================================================= */
+async function send(){
+  const msg = (chatInput.value || "").trim();
+  if(!msg) return;
+
+  chatInput.value = "";
+  addMsg(msg, "user");
+  showTyping();
+  setBusy(true);
+
+  // Envía memoria al backend (si tu backend la ignora, no pasa nada)
+  const history = session
+    .filter(x => x.role === "user" || x.role === "bot")
+    .slice(-12)
+    .map(x => ({ role: x.role === "bot" ? "assistant" : "user", content: x.text }));
+
+  try{
+    const r = await fetch(API_URL, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        message: msg,
+        lang: LANG,
+        history
+      })
+    });
+
+    const d = await r.json().catch(()=>({}));
+    hideTyping();
+    setBusy(false);
+
+    const reply = d.reply || (LANG==="en" ? "No response." : "Sin respuesta.");
+    addMsg(reply, "bot", d.videoUrl || null);
+
+  }catch{
+    hideTyping();
+    setBusy(false);
+    addMsg(I18N[LANG].unavailable, "bot");
+  }
+}
+
+/* =========================================================
+   Clear session
+========================================================= */
+function clearChat(){
+  session = [];
+  saveSession(session);
+  chatMessages.innerHTML = "";
+  addMsg(I18N[LANG].cleared, "sys");
+}
+
+/* =========================================================
+   Init / Restore session to UI
+========================================================= */
+function restore(){
+  applyLang();
+
+  // Si no hay nada, mensaje de bienvenida (no persistente o sí, tú decides)
+  if(!session.length){
+    addMsg(I18N[LANG].sys_welcome, "sys");
+    return;
+  }
+
+  // Renderiza sesión previa
+  chatMessages.innerHTML = "";
+  session.forEach(m=>{
+    const cls = (m.role === "user") ? "user" : (m.role === "bot" ? "bot" : "sys");
+    addMsg(m.text, cls, m.videoUrl || null, false);
+  });
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+/* =========================================================
+   Events
+========================================================= */
+chatBtn.addEventListener("click", toggleChat);
+closeBtn.addEventListener("click", toggleChat);
+clearBtn.addEventListener("click", clearChat);
+sendBtn.addEventListener("click", send);
+chatInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") send(); });
+
+restore();
 </script>
 
+<!-- Leaflet/Chart no se requieren para el chat. -->
 </body>
 </html>
