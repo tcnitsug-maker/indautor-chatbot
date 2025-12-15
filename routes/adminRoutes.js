@@ -25,24 +25,44 @@ const VideoAsset = require("../models/VideoAsset");
 // =====================
 // Helpers: Permisos
 // =====================
-const ROLE_ORDER = ["support", "analyst", "editor", "super"];
+router.get(
+  "/messages/export-xlsx",
+  requireRole(["support", "analyst", "editor", "super"]),
+  async (req, res) => {
+    try {
+      const filter = buildMessageFilter(req.query);
+      const rows = await Message.find(filter).sort({ createdAt: -1 }).lean();
 
-function roleAtLeast(userRole, requiredRole) {
-  const u = normalizeRole(userRole);
-  const order = ROLE_ORDER;
-  return order.indexOf(u) >= order.indexOf(requiredRole);
-}
+      const data = rows.map(r => ({
+        Fecha: r.createdAt ? new Date(r.createdAt).toISOString() : "",
+        Rol: r.role || "",
+        Mensaje: r.text || r.message || "",
+        IP: r.ip || "",
+        Fuente: r.source || "",
+      }));
 
-function requireRole(requiredRole) {
-  return (req, res, next) => {
-    // req.admin debe venir del middleware de autenticación previo
-    if (!req.admin) return res.status(401).json({ error: "No autorizado" });
-    if (!roleAtLeast(req.admin.role, requiredRole)) {
-      return res.status(403).json({ error: "Permisos insuficientes" });
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "Mensajes");
+
+      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="historial_chat.xlsx"'
+      );
+
+      res.send(buffer);
+    } catch (err) {
+      console.error("Error exportando XLSX:", err);
+      res.status(500).json({ error: "No se pudo exportar XLSX" });
     }
-    next();
-  };
-}
+  }
+);
 
 // =====================
 // Helper: Filtro Unificado
