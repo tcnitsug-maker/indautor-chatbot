@@ -238,3 +238,35 @@ function logout(){
   localStorage.removeItem("token");
   location.href="/admin-login.html";
 }
+// =============================
+// DESCARGAR PLANTILLA EXCEL
+// =============================
+async function downloadCustomTemplate() {
+  try {
+    const r = await fetch("/admin/custom-replies/template-xlsx", {
+      headers: {
+        Authorization: "Bearer " + localStorage.token
+      }
+    });
+
+    if (!r.ok) {
+      throw new Error("No se pudo descargar la plantilla");
+    }
+
+    const blob = await r.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "plantilla_respuestas.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error(e);
+    alert("Error descargando la plantilla Excel");
+  }
+}
+
