@@ -1,7 +1,6 @@
-/* ===== RESET BÁSICO ===== */
 * {
   box-sizing: border-box;
-  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: "Segoe UI", Arial, sans-serif;
 }
 
 body {
@@ -10,131 +9,103 @@ body {
   color: #333;
 }
 
-/* ===== HEADER ===== */
-header {
+/* HEADER */
+.topbar {
   background: #0b3c68;
-  color: #fff;
-  padding: 15px 25px;
+  color: white;
+  padding: 15px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-header h1 {
-  font-size: 18px;
-  margin: 0;
-}
-
-header button {
-  background: #ff5c5c;
-  border: none;
-  color: white;
-  padding: 8px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-/* ===== NAV ===== */
-nav {
-  background: #ffffff;
-  padding: 10px 20px;
+.brand {
   display: flex;
   gap: 10px;
-  border-bottom: 1px solid #ddd;
+  align-items: center;
 }
 
-nav button {
-  background: #e9eef3;
+.subtitle {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* LAYOUT */
+.layout {
+  display: flex;
+}
+
+.sidebar {
+  width: 220px;
+  background: #ffffff;
+  border-right: 1px solid #ddd;
+  padding: 10px;
+}
+
+.navbtn {
+  width: 100%;
+  padding: 10px;
   border: none;
-  padding: 8px 14px;
+  background: #e9eef3;
+  margin-bottom: 8px;
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 500;
 }
 
-nav button.active {
+.navbtn.active {
   background: #0b3c68;
   color: white;
 }
 
-/* ===== CONTENIDO ===== */
-main {
-  padding: 25px;
-  max-width: 1200px;
-  margin: auto;
-}
-
-/* ===== CARDS ===== */
-.card {
-  background: white;
-  border-radius: 10px;
+.content {
+  flex: 1;
   padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
-.card h2 {
-  margin-top: 0;
-  font-size: 18px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
+/* TABS */
+.tab {
+  display: none;
 }
 
-/* ===== GRID ===== */
+.tab.active {
+  display: block;
+}
+
+/* GRID + CARDS */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
   gap: 20px;
 }
 
-/* ===== BOTONES ===== */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,.05);
+}
+
+/* BOTONES */
 .btn {
-  background: #0b3c68;
-  color: white;
-  border: none;
   padding: 8px 14px;
   border-radius: 6px;
+  border: none;
   cursor: pointer;
 }
 
-.btn.secondary {
-  background: #6c757d;
-}
+.btn.success { background: #28a745; color: white; }
+.btn.danger { background: #dc3545; color: white; }
 
-.btn.success {
-  background: #28a745;
-}
-
-.btn.warning {
-  background: #ffc107;
-  color: #333;
-}
-
-/* ===== INPUTS ===== */
-input, select {
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  width: 100%;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-/* ===== TABLAS ===== */
+/* TABLAS */
 table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: 15px;
 }
 
 th, td {
   padding: 8px;
-  border-bottom: 1px solid #eee;
-  text-align: left;
+  border-bottom: 1px solid #ddd;
 }
 
 th {
