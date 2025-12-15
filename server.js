@@ -1,6 +1,3 @@
-// =====================
-// IMPORTS
-// =====================
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -9,9 +6,6 @@ const http = require("http");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
-// =====================
-// APP + SERVER
-// =====================
 const app = express();
 const server = http.createServer(app);
 
@@ -37,48 +31,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // =====================
-// PANEL ADMIN (FRONTEND) — DEBE IR PRIMERO
-// =====================
-app.use(
-  "/admin-panel",
-  express.static(path.join(__dirname, "public", "admin"))
-);
-
-app.get("/admin-panel", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
-});
-
-// =====================
-// ARCHIVOS ESTÁTICOS GENERALES
+// ARCHIVOS ESTÁTICOS
 // =====================
 app.use(express.static(path.join(__dirname, "public")));
-
-
-// =====================
-// PANEL ADMIN (BACKEND)
-// =====================
-app.use(
-  "/admin-panel",
-  express.static(path.join(__dirname, "public", "admin"))
-);
-
-app.get("/admin-panel", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
-});
-
-app.get("/admin-panel/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
-});
-// =====================
-// ADMIN PANEL ENTRYPOINT
-// =====================
-app.get("/admin-panel", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
-});
-
-app.get("/admin-panel/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
-});
 
 // =====================
 // MONGODB
@@ -89,9 +44,20 @@ mongoose
   .catch((e) => console.error("❌ MongoDB error:", e.message));
 
 // =====================
+// HTML PÚBLICO
+// =====================
+app.get("/admin-login.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin-login.html"));
+});
+
+app.get("/admin.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+
+// =====================
 // AUTH ADMIN (LOGIN)
 // =====================
-// POST /admin-auth/login
+// ⚠️ adminAuthRoutes DEBE exportar router con module.exports
 const adminAuthRoutes = require("./routes/adminAuthRoutes");
 app.use("/admin-auth", adminAuthRoutes);
 
@@ -99,14 +65,15 @@ app.use("/admin-auth", adminAuthRoutes);
 // RUTAS PROTEGIDAS ADMIN
 // =====================
 const authAdmin = require("./middleware/authAdmin");
+// ⚠️ adminRoutes DEBE exportar router con module.exports
 const adminRoutes = require("./routes/adminRoutes");
 
-// viewer = rol mínimo
 app.use("/admin", authAdmin("viewer"), adminRoutes);
 
 // =====================
 // CHAT
 // =====================
+// ⚠️ chatController DEBE exportar { sendChat }
 const chatController = require("./controllers/chatController");
 app.post("/chat", chatController.sendChat);
 
@@ -118,7 +85,7 @@ app.get("/", (req, res) => {
 });
 
 // =====================
-// SOCKET AUTH (ADMIN)
+// SOCKET AUTH
 // =====================
 io.use((socket, next) => {
   try {
@@ -126,9 +93,7 @@ io.use((socket, next) => {
     if (!token) return next(new Error("NO_TOKEN"));
 
     const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
-
-    // ROLES REALES DEL SISTEMA
-    const roles = ["support", "analyst", "editor", "super"];
+    const roles = ["viewer", "admin", "superadmin"];
     if (!roles.includes(decoded.role)) return next(new Error("BAD_ROLE"));
 
     socket.admin = decoded;
@@ -139,12 +104,12 @@ io.use((socket, next) => {
 });
 
 io.on("connection", (socket) => {
-  console.log("🟢 Admin conectado por socket:", socket.admin?.username);
+  console.log("🟢 Admin conectado:", socket.admin?.username);
 });
 
 // =====================
 // START SERVER
 // =====================
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor INDARELÍN listo en puerto ${PORT}`);
+  console.log(`🚀 Servidor listo en puerto ${PORT}`);
 });
