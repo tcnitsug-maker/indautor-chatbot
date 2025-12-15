@@ -13,47 +13,20 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 /* =========================================================
    🔧 NORMALIZACIÓN
 ========================================================= */
-function stripAccents(s="") {
-  return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+function stripAccents(s = "") {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
-function norm(s="") {
+function norm(s = "") {
   return stripAccents(String(s).toLowerCase())
-    .replace(/[^a-z0-9ñ\s]/gi," ")
-    .replace(/\s+/g," ")
+    .replace(/[^a-z0-9ñ\s]/gi, " ")
+    .replace(/\s+/g, " ")
     .trim();
-}
-
-/* =========================================================
-   🎥 MAPEO TEXTO → VIDEO (ROBUSTO)
-========================================================= */
-function getVideoForReply(text="") {
-  const t = norm(text);
-
-  if (t.includes("registrarme en indarelin"))
-    return "https://youtu.be/NaDQ1HK4hjk";
-
-  if (t.includes("desahogar un tramite"))
-    return "https://youtu.be/0-u1o0T4Hfs";
-
-  if (t.includes("modifica tu informacion"))
-    return "https://youtu.be/Zl_qTv9WJJk";
-
-  if (t.includes("alta de representantes legales"))
-    return "https://youtu.be/gnzDyWSwCQs";
-
-  if (t.includes("registra a tus titulares"))
-    return "https://youtu.be/pKs-mFPPEZE";
-
-  if (t.includes("registra tus autores"))
-    return "https://youtu.be/sPH6AtE0A_8";
-
-  return null;
 }
 
 /* =========================================================
    ⚙️ SETTINGS IA
 ========================================================= */
-async function getSetting(key, fallback=null) {
+async function getSetting(key, fallback = null) {
   const doc = await Setting.findOne({ key }).lean();
   return doc ? doc.value : fallback;
 }
@@ -66,142 +39,191 @@ async function setSetting(key, value) {
 }
 
 /* =========================================================
-   ⭐ RESPUESTAS PRIORITARIAS (FUZZY)
+   ⭐ MATCHING FUZZY (CUSTOM REPLIES)
 ========================================================= */
-function tokens(s="") { return norm(s).split(" ").filter(Boolean); }
-function jaccard(a,b){
-  const A=new Set(a),B=new Set(b);
-  let i=0; for(const x of A) if(B.has(x)) i++;
-  return i/(A.size+B.size-i||1);
+function tokens(s = "") {
+  return norm(s).split(" ").filter(Boolean);
 }
-function levenshtein(a,b){
-  a=norm(a); b=norm(b);
-  const m=a.length,n=b.length;
-  const d=[...Array(m+1)].map(()=>Array(n+1).fill(0));
-  for(let i=0;i<=m;i++)d[i][0]=i;
-  for(let j=0;j<=n;j++)d[0][j]=j;
-  for(let i=1;i<=m;i++)
-    for(let j=1;j<=n;j++)
-      d[i][j]=Math.min(
-        d[i-1][j]+1,
-        d[i][j-1]+1,
-        d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)
+function jaccard(a, b) {
+  const A = new Set(a), B = new Set(b);
+  let i = 0;
+  for (const x of A) if (B.has(x)) i++;
+  return i / (A.size + B.size - i || 1);
+}
+function levenshtein(a, b) {
+  a = norm(a); b = norm(b);
+  const m = a.length, n = b.length;
+  const d = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) d[i][0] = i;
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      d[i][j] = Math.min(
+        d[i - 1][j] + 1,
+        d[i][j - 1] + 1,
+        d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
       );
   return d[m][n];
 }
-function similarity(a,b){
-  if(!a||!b) return 0;
-  return 0.6*jaccard(tokens(a),tokens(b)) +
-         0.4*(1-levenshtein(a,b)/Math.max(a.length,b.length,1));
+function similarity(a, b) {
+  if (!a || !b) return 0;
+  return (
+    0.6 * jaccard(tokens(a), tokens(b)) +
+    0.4 * (1 - levenshtein(a, b) / Math.max(a.length, b.length, 1))
+  );
 }
 
-async function findCustomReply(msg) {
-  const list = await CustomReply.find({ enabled:true })
-    .sort({ priority:-1, updatedAt:-1 })
+async function findCustomReply(userMsg) {
+  const list = await CustomReply.find({ enabled: true })
+    .sort({ priority: -1, updatedAt: -1 })
     .lean();
 
-  let best=null,score=0;
-  for(const r of list){
-    const s=similarity(msg, r.trigger || r.question || "");
-    if(s>score){ score=s; best=r; }
+  let best = null;
+  let bestScore = 0;
+
+  for (const r of list) {
+    const trigger = r.trigger || r.question || "";
+    const score = similarity(norm(userMsg), norm(trigger));
+    if (score > bestScore) {
+      bestScore = score;
+      best = r;
+    }
   }
 
-  if(best && score>=0.78){
+  if (best && bestScore >= 0.78) {
     return {
-      reply: best.response || best.answer,
+      reply: best.response || best.answer || "",
+      type: best.type || "text",
+      videoUrl: best.videoUrl || null,
       source: "custom",
-      score: Number(score.toFixed(3))
+      score: Number(bestScore.toFixed(3))
     };
   }
+
   return null;
 }
 
 /* =========================================================
    🤖 IA
 ========================================================= */
-async function askOpenAI(msg){
-  const r = await fetch("https://api.openai.com/v1/chat/completions",{
-    method:"POST",
-    headers:{
-      "Authorization":`Bearer ${OPENAI_API_KEY}`,
-      "Content-Type":"application/json"
+async function askOpenAI(msg) {
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json"
     },
-    body:JSON.stringify({
-      model:OPENAI_MODEL,
-      temperature:0.2,
-      messages:[
-        {role:"system",content:"Asistente institucional INDARELÍN / INDAUTOR"},
-        {role:"user",content:msg}
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      temperature: 0.2,
+      messages: [
+        { role: "system", content: "Asistente institucional INDARELÍN / INDAUTOR." },
+        { role: "user", content: msg }
       ]
     })
   });
-  const d=await r.json();
+  const d = await r.json();
   return d?.choices?.[0]?.message?.content?.trim();
 }
 
-async function askGemini(msg){
-  const r=await fetch(
+async function askGemini(msg) {
+  const r = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-    {method:"POST",headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({contents:[{parts:[{text:msg}]}]})}
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: msg }] }]
+      })
+    }
   );
-  const d=await r.json();
-  return d?.candidates?.[0]?.content?.parts?.map(p=>p.text).join(" ");
+  const d = await r.json();
+  return d?.candidates?.[0]?.content?.parts?.map(p => p.text).join(" ");
 }
 
-async function askAI(msg){
-  const turn = await getSetting("ai_turn","gemini");
-  await setSetting("ai_turn", turn==="gemini"?"openai":"gemini");
-  try{
+async function askAIAlternating(msg) {
+  const turn = await getSetting("ai_turn", "gemini");
+  await setSetting("ai_turn", turn === "gemini" ? "openai" : "gemini");
+  try {
     return {
-      reply: turn==="gemini" ? await askGemini(msg) : await askOpenAI(msg),
+      reply: turn === "gemini" ? await askGemini(msg) : await askOpenAI(msg),
       source: turn
     };
-  }catch{
-    return { reply:"Servicio temporalmente no disponible.", source:"fallback" };
+  } catch {
+    return {
+      reply: "Servicio temporalmente no disponible.",
+      source: "fallback"
+    };
   }
 }
 
 /* =========================================================
-   🚀 ENDPOINT
+   🚀 ENDPOINT PRINCIPAL
 ========================================================= */
-exports.sendChat = async (req,res)=>{
-  try{
-    const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
-    const userMsg = String(req.body?.message||"").trim();
-    if(!userMsg) return res.json({reply:"Falta el mensaje."});
+exports.sendChat = async (req, res) => {
+  try {
+    const ip =
+      req.headers["x-forwarded-for"]?.split(",")[0] ||
+      req.socket.remoteAddress;
 
-    const blocked = await BlockedIP.findOne({ip,active:true}).lean();
-    if(blocked) return res.status(403).json({reply:"Acceso restringido."});
+    const userMsg = String(req.body?.message || "").trim();
+    if (!userMsg) {
+      return res.json({ reply: "Falta el mensaje." });
+    }
 
-    await Message.create({role:"user",text:userMsg,ip,source:"user"});
-
-    const custom = await findCustomReply(norm(userMsg));
-    if(custom){
-      const videoUrl = getVideoForReply(custom.reply);
-      await Message.create({role:"bot",text:custom.reply,ip,source:"custom"});
-      return res.json({
-        reply: custom.reply,
-        source: "custom",
-        matchScore: custom.score,
-        videoUrl
+    const blocked = await BlockedIP.findOne({ ip, active: true }).lean();
+    if (blocked) {
+      return res.status(403).json({
+        reply: "Acceso restringido. Contacte al administrador."
       });
     }
 
-    const ai = await askAI(userMsg);
-    const videoUrl = getVideoForReply(ai.reply);
-
-    await Message.create({role:"bot",text:ai.reply,ip,source:ai.source});
-    return res.json({
-      reply: ai.reply,
-      source: ai.source,
-      videoUrl
+    await Message.create({
+      role: "user",
+      text: userMsg,
+      ip,
+      source: "user"
     });
 
-  }catch(e){
-    console.error(e);
+    /* ========= PRIORIDAD: CUSTOM REPLY ========= */
+    const custom = await findCustomReply(userMsg);
+    if (custom) {
+      await Message.create({
+        role: "bot",
+        text: custom.reply,
+        ip,
+        source: "custom"
+      });
+
+      return res.json({
+        reply: custom.reply,
+        type: custom.type,
+        videoUrl: custom.type === "video" ? custom.videoUrl : null,
+        source: custom.source,
+        matchScore: custom.score
+      });
+    }
+
+    /* ========= IA ========= */
+    const ai = await askAIAlternating(userMsg);
+
+    await Message.create({
+      role: "bot",
+      text: ai.reply,
+      ip,
+      source: ai.source
+    });
+
+    return res.json({
+      reply: ai.reply,
+      type: "text",
+      source: ai.source
+    });
+
+  } catch (e) {
+    console.error("CHAT ERROR:", e);
     return res.status(500).json({
-      reply:"Estamos experimentando un problema técnico. Intenta nuevamente."
+      reply: "Estamos experimentando un problema técnico. Intenta nuevamente."
     });
   }
 };
