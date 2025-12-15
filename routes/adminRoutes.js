@@ -881,51 +881,6 @@ const Message = require("../models/Message");
 const Setting = require("../models/Setting");
 const requireRole = require("../middlewares/requireRole");
 
-/* ======================================================
-   SETTINGS – LÍMITE DIARIO DE IA POR IP (SOLO SUPER)
-====================================================== */
-router.put("/settings/ai-limit", requireRole("super"), async (req, res) => {
-  try {
-    const { ai_daily_limit_per_ip } = req.body || {};
-    const v = parseInt(ai_daily_limit_per_ip, 10);
-
-    if (!Number.isFinite(v) || v < 0 || v > 10000) {
-      return res.status(400).json({ error: "Valor inválido" });
-    }
-
-    const row = await Setting.findOneAndUpdate(
-      { key: "ai_daily_limit_per_ip" },
-      { $set: { value: v, updatedAt: new Date() } },
-      { upsert: true, new: true }
-    );
-
-    res.json({ ok: true, setting: row });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Error guardando setting" });
-  }
-});
-
-/* ======================================================
-   EXPORTAR HISTORIAL DE RESPUESTAS
-====================================================== */
-router.get("/export", requireRole("super"), async (req, res) => {
-  try {
-    const format = req.query.format || "csv";
-
-    const messages = await Message.find()
-      .sort({ createdAt: -1 })
-      .lean();
-
-    // ---------- JSON ----------
-    if (format === "json") {
-      res.setHeader(
-        "Content-Disposition",
-        "attachment; filename=historial_chatbot.json"
-      );
-      return res.json(messages);
-    }
-
     // ---------- CSV ----------
     let csv = "Rol,Mensaje,Fuente,IP,Fecha\n";
 
