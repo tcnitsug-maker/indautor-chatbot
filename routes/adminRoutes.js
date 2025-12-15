@@ -104,6 +104,7 @@ router.get("/messages/export-csv", async (req, res) => {
         (m.createdAt || "").toISOString(),
         m.ip || "",
         m.role || "",
+        m.source || "",
         (m.text || "").replace(/"/g, '""'),
       ]
         .map((v) => `"${v}"`)
@@ -890,6 +891,187 @@ router.put("/settings/ai-limit", requireRole("super"), async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Error guardando setting" });
+  }
+});
+
+
+// =======================================================================
+// 12. GET /admin/messages/export-general-csv  → Exportar historial general CSV (incluye fuente)
+// =======================================================================
+router.get("/messages/export-general-csv", async (req, res) => {
+  try {
+    const msgs = await Message.find({}).sort({ createdAt: -1 }).lean();
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=\"historial_general.csv\"");
+
+    res.write("fecha,ip,rol,fuente,text\n");
+
+    for (const m of msgs) {
+      const row = [
+        (m.createdAt || "").toISOString(),
+        m.ip || "",
+        m.role || "",
+        m.source || "",
+        (m.text || "").replace(/"/g, '""'),
+      ].map(v => `"${v}"`).join(",");
+
+      res.write(row + "\n");
+    }
+
+    res.end();
+  } catch (e) {
+    console.error("Error exportando historial general CSV:", e);
+    res.status(500).json({ error: "No se pudo exportar el historial general (CSV)." });
+  }
+});
+
+// =======================================================================
+// 13. GET /admin/messages/export-general-xlsx  → Exportar historial general XLSX
+// =======================================================================
+router.get("/messages/export-general-xlsx", async (req, res) => {
+  try {
+    const rows = await Message.find({}).sort({ createdAt: -1 }).lean();
+
+    const data = rows.map(r => ({
+      Fecha: new Date(r.createdAt).toISOString(),
+      Rol: r.role,
+      Mensaje: r.text,
+      IP: r.ip || "",
+      Fuente: r.source || "",
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, "Historial");
+
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=historial_general.xlsx");
+    res.send(buf);
+  } catch (e) {
+    console.error("Error exportando historial general XLSX:", e);
+    res.status(500).json({ error: "No se pudo exportar el historial general (XLSX)." });
+  }
+});
+
+// =======================================================================
+// 14. GET /admin/metrics/ai  → Métricas de uso (OpenAI vs Gemini vs Custom)
+// =======================================================================
+router.get("/metrics/ai", async (req, res) => {
+  try {
+    const { start, end } = req.query;
+    const q = { role: "bot" };
+
+    if (start || end) {
+      q.createdAt = {};
+      if (start) q.createdAt.$gte = new Date(start);
+      if (end) q.createdAt.$lte = new Date(end);
+    }
+
+    const agg = await Message.aggregate([
+      { $match: q },
+      { $group: { _id: "$source", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    const bySource = {};
+    let totalBot = 0;
+    for (const r of agg) {
+      const k = r._id || "desconocido";
+      bySource[k] = r.count;
+      totalBot += r.count;
+    }
+
+    const userQ = { role: "user" };
+    if (q.createdAt) userQ.createdAt = q.createdAt;
+    const totalUser = await Message.countDocuments(userQ);
+
+    res.json({
+      ok: true,
+      range: { start: start || null, end: end || null },
+      totalBot,
+      totalUser,
+      bySource,
+      topSource: Object.keys(bySource)[0] || null,
+    });
+  } catch (e) {
+    console.error("Error métricas IA:", e);
+    res.status(500).json({ error: "Error obteniendo métricas IA" });
+  }
+});
+
+// =======================================================================
+// 15. GET /admin/metrics/ai/export-csv  → Exportar métricas de IA (CSV)
+// =======================================================================
+router.get("/metrics/ai/export-csv", async (req, res) => {
+  try {
+    const { start, end } = req.query;
+    const q = { role: "bot" };
+
+    if (start || end) {
+      q.createdAt = {};
+      if (start) q.createdAt.$gte = new Date(start);
+      if (end) q.createdAt.$lte = new Date(end);
+    }
+
+    const agg = await Message.aggregate([
+      { $match: q },
+      { $group: { _id: "$source", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=\"metricas_ia.csv\"");
+
+    res.write("fuente,cantidad\n");
+    for (const r of agg) {
+      const fuente = String(r._id || "desconocido").replace(/"/g, '""');
+      res.write(`"${fuente}","${r.count}"\n`);
+    }
+    res.end();
+  } catch (e) {
+    console.error("Error export CSV métricas IA:", e);
+    res.status(500).json({ error: "Error exportando métricas IA (CSV)" });
+  }
+});
+
+// =======================================================================
+// 16. GET /admin/metrics/ai/export-xlsx  → Exportar métricas de IA (XLSX)
+// =======================================================================
+router.get("/metrics/ai/export-xlsx", async (req, res) => {
+  try {
+    const { start, end } = req.query;
+    const q = { role: "bot" };
+
+    if (start || end) {
+      q.createdAt = {};
+      if (start) q.createdAt.$gte = new Date(start);
+      if (end) q.createdAt.$lte = new Date(end);
+    }
+
+    const agg = await Message.aggregate([
+      { $match: q },
+      { $group: { _id: "$source", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    const data = agg.map(r => ({
+      Fuente: r._id || "desconocido",
+      Cantidad: r.count,
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, "IA");
+
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=metricas_ia.xlsx");
+    res.send(buf);
+  } catch (e) {
+    console.error("Error export XLSX métricas IA:", e);
+    res.status(500).json({ error: "Error exportando métricas IA (XLSX)" });
   }
 });
 

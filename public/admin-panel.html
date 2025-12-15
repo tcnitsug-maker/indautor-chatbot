@@ -54,6 +54,11 @@
     <!-- MENSAJES -->
     <section id="messages" class="tab">
       <h2>Historial de mensajes</h2>
+      <div class="actions">
+        <button class="btn" onclick="downloadHistorialGeneralCSV()">⬇️ Historial general (CSV)</button>
+        <button class="btn" onclick="downloadHistorialGeneralXLSX()">⬇️ Historial general (XLSX)</button>
+        <button class="btn" onclick="downloadMetricasIAXLSX()">📊 Métricas IA (XLSX)</button>
+      </div>
       <table>
         <thead>
           <tr><th>Rol</th><th>Mensaje</th><th>Fecha</th></tr>
@@ -65,7 +70,11 @@
     <!-- RESPUESTAS -->
     <section id="custom" class="tab">
       <h2>Respuestas personalizadas</h2>
-      <button class="btn">📥 Exportar</button>
+      <div class="actions">
+        <button class="btn" onclick="downloadCustomTemplate()">📄 Plantilla (XLSX)</button>
+        <button class="btn" onclick="downloadCustomCSV()">⬇️ Exportar (CSV)</button>
+        <button class="btn" onclick="downloadCustomPDF()">⬇️ Exportar (PDF)</button>
+      </div>
       <table>
         <thead>
           <tr><th>Trigger</th><th>Prioridad</th><th>Activo</th></tr>

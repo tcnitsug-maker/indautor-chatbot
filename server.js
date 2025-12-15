@@ -67,8 +67,10 @@ app.use("/admin-auth", adminAuthRoutes);
 const authAdmin = require("./middleware/authAdmin");
 // ⚠️ adminRoutes DEBE exportar router con module.exports
 const adminRoutes = require("./routes/adminRoutes");
+const metricsRoutes = require("./routes/metricsRoutes");
 
 app.use("/admin", authAdmin("viewer"), adminRoutes);
+app.use("/metrics", authAdmin("viewer"), metricsRoutes);
 
 // =====================
 // CHAT

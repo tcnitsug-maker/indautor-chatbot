@@ -773,6 +773,40 @@ async function downloadCustomTemplate() {
     console.error(e);
     toast("No se pudo descargar la plantilla", "error");
   }
+
+async function downloadHistorialGeneralCSV() {
+  try {
+    await downloadBlob(`${ADMIN_API}/messages/export-general-csv`, "historial_general.csv", "text/csv");
+  } catch (e) {
+    console.error(e);
+    toast("No se pudo descargar el historial (CSV)", "error");
+  }
+}
+
+async function downloadHistorialGeneralXLSX() {
+  try {
+    await downloadBlob(`${ADMIN_API}/messages/export-general-xlsx`, "historial_general.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  } catch (e) {
+    console.error(e);
+    toast("No se pudo descargar el historial (XLSX)", "error");
+  }
+}
+
+async function downloadMetricasIAXLSX() {
+  try {
+    // últimos 30 días por defecto
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 30);
+    const startStr = start.toISOString().slice(0, 10);
+    const endStr = end.toISOString().slice(0, 10);
+
+    await downloadBlob(`${ADMIN_API}/metrics/ai/export-xlsx?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`, "metricas_ia.xlsx");
+  } catch (e) {
+    console.error(e);
+    toast("No se pudo descargar métricas IA", "error");
+  }
+}
 }
 
 async function downloadCustomCSV() {
@@ -1217,15 +1251,15 @@ async function exportBlockedIPsXLSX() {
   }
 }
 
-async function exportMetricsXLSX() {
+async async function exportMetricsXLSX() {
   try {
     // exporta últimos 30 días
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - 30);
 
-    const startStr = start.toISOString().slice(0,10);
-    const endStr = end.toISOString().slice(0,10);
+    const startStr = start.toISOString().slice(0, 10);
+    const endStr = end.toISOString().slice(0, 10);
 
     await downloadBlob(`/metrics/export-xlsx?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`, "metricas.xlsx");
   } catch (e) {
