@@ -1218,7 +1218,7 @@ async function blockIPQuick(ip) {
       method: "POST",
       body: JSON.stringify({ ip, reason: "" })
     });
-    toast("IP bloqueada", "ok");
+    toast("IP bloqueada", "success");
     loadBlockedIPs();
   } catch (e) {
     console.error(e);
@@ -1233,7 +1233,7 @@ async function unblockIP(ip) {
       method: "POST",
       body: JSON.stringify({ ip })
     });
-    toast("IP desbloqueada", "ok");
+    toast("IP desbloqueada", "success");
     loadBlockedIPs();
   } catch (e) {
     console.error(e);
@@ -1248,7 +1248,7 @@ async function loadSettings() {
     const v = s.ai_daily_limit_per_ip ?? "";
     const el = document.getElementById("aiLimitPerIp");
     if (el) el.value = v;
-    toast("Settings cargados", "ok");
+    toast("Settings cargados", "success");
   } catch (e) {
     console.error(e);
     toast("Error cargando settings", "error");
@@ -1263,7 +1263,7 @@ async function saveAiLimit() {
       method: "PUT",
       body: JSON.stringify({ ai_daily_limit_per_ip: v })
     });
-    toast("Límite IA guardado", "ok");
+    toast("Límite IA guardado", "success");
   } catch (e) {
     console.error(e);
     toast("Error guardando setting", "error");
