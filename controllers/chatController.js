@@ -1,78 +1,17 @@
 const Message = require("../models/Message");
-const BlockedIP = require("../models/BlockedIP");
-const Setting = require("../models/Setting");
 const CustomReply = require("../models/CustomReply");
 const fetch = require("node-fetch");
 
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";   // ← SOLO ESTA LÍNEA
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-// ----------------------
-// Cache (blocked IPs / settings)
-// ----------------------
-let blockedCache = { ts: 0, set: new Set() };
-const BLOCKED_CACHE_TTL_MS = 60_000;
+let useGemini = true;
+ // true = Gemini, false = OpenAI
 
-async function getBlockedSet() {
-  const now = Date.now();
-  if (now - blockedCache.ts < BLOCKED_CACHE_TTL_MS) return blockedCache.set;
-  const rows = await BlockedIP.find({ active: true }).select("ip").lean();
-  blockedCache = { ts: now, set: new Set(rows.map(r => r.ip)) };
-  return blockedCache.set;
-}
-
-async function getSetting(key, fallback) {
-  const row = await Setting.findOne({ key }).lean();
-  if (!row || row.value === undefined || row.value === null) return fallback;
-  return row.value;
-}
-
-// ----------------------
-// Anti-flood
-// ----------------------
-const FLOOD_MIN_DELAY = 3000;
-const FLOOD_MAX_BURST = 4;
-const FLOOD_BLOCK_TIME = 10000;
-
-const floodMap = new Map(); // ip -> { lastTime, count, blockedUntil }
-
-function checkFlood(ip) {
-  const now = Date.now();
-
-  if (!floodMap.has(ip)) {
-    floodMap.set(ip, { lastTime: 0, count: 0, blockedUntil: 0 });
-  }
-
-  const data = floodMap.get(ip);
-
-  if (now < data.blockedUntil) {
-    return { blocked: true, wait: data.blockedUntil - now };
-  }
-
-  const diff = now - data.lastTime;
-
-  if (diff < FLOOD_MIN_DELAY) {
-    data.count++;
-    if (data.count >= FLOOD_MAX_BURST) {
-      data.blockedUntil = now + FLOOD_BLOCK_TIME;
-      data.count = 0;
-      return { blocked: true, wait: FLOOD_BLOCK_TIME };
-    }
-  } else {
-    data.count = 0;
-  }
-
-  data.lastTime = now;
-  floodMap.set(ip, data);
-  return { blocked: false };
-}
-
-// ----------------------
-// Custom replies
-// ----------------------
-function normalize(text) {
+function normalizeText(text) {
   return (text || "")
     .toLowerCase()
     .normalize("NFD")
@@ -81,33 +20,19 @@ function normalize(text) {
 }
 
 async function findCustomReply(userText) {
-  const normUser = normalize(userText);
-  const replies = await CustomReply.find({ enabled: true }).sort({ priority: -1, createdAt: -1 });
+  const normUser = normalizeText(userText);
+  const replies = await CustomReply.find({ enabled: true });
 
   for (const r of replies) {
-    const trig = r.trigger || r.question || "";
-    const nq = normalize(trig);
-    if (nq && (normUser.includes(nq) || nq.includes(normUser))) {
-      return {
-        type: r.type || "text",
-        reply: r.response || r.answer || "",
-        video_url: r.video_url || "",
-        video_file: r.video_file || "",
-        video_name: r.video_name || ""
-      };
+    const nq = normalizeText(r.question);
+    if (normUser.includes(nq) || nq.includes(normUser)) {
+      return r.answer;
     }
-
     if (Array.isArray(r.keywords)) {
       for (const kw of r.keywords) {
-        const nk = normalize(kw);
+        const nk = normalizeText(kw);
         if (nk && normUser.includes(nk)) {
-          return {
-            type: r.type || "text",
-            reply: r.response || r.answer || "",
-            video_url: r.video_url || "",
-            video_file: r.video_file || "",
-            video_name: r.video_name || ""
-          };
+          return r.answer;
         }
       }
     }
@@ -115,165 +40,121 @@ async function findCustomReply(userText) {
   return null;
 }
 
-// ----------------------
-// OpenAI
-// ----------------------
 async function callOpenAI(messages) {
-  if (!OPENAI_API_KEY) return null;
-
-  try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        messages,
-        max_tokens: 350,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() || null;
-  } catch {
-    return null;
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.warn("Falta OPENAI_API_KEY");
+    return "Por el momento no puedo consultar OpenAI (falta API key).";
   }
+
+  const res = await fetch(OPENAI_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      messages,
+    }),
+  });
+
+  if (!res.ok) {
+    console.error("Error OpenAI:", await res.text());
+    return "Hubo un problema consultando OpenAI.";
+  }
+
+  const data = await res.json();
+  return (
+    data.choices?.[0]?.message?.content?.trim() ||
+    "No obtuve respuesta de OpenAI."
+  );
 }
 
-// ----------------------
-// Gemini
-// ----------------------
 async function callGemini(messages) {
-  if (!GEMINI_API_KEY) return null;
-
-  try {
-    const prompt = messages
-      .map((m) => `${m.role === "user" ? "Usuario" : "Sistema"}: ${m.content}`)
-      .join("\n");
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 350, temperature: 0.7 },
-      }),
-    });
-
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
-  } catch {
-    return null;
+  if (!GEMINI_API_KEY) {
+    console.warn("Falta GEMINI_API_KEY");
+    return "Por el momento no puedo consultar Gemini (falta API key).";
   }
+
+  const promptText = messages
+    .map((m) => `${m.role === "user" ? "Usuario" : "Sistema"}: ${m.content}`)
+    .join("\n");
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: promptText }],
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    console.error("Error Gemini:", await res.text());
+    return "Hubo un problema consultando Gemini.";
+  }
+
+  const data = await res.json();
+  const text =
+    data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
+    "No obtuve respuesta de Gemini.";
+  return text;
 }
 
-// ----------------------
-// CONTROLLER
-// ----------------------
 exports.sendChat = async (req, res) => {
-  const io = req.app?.locals?.io;
-
   try {
-    const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || "unknown";
+    const userMessage = (req.body && req.body.message) || "";
 
-    // Bloqueo por IP (lista negra en DB)
-    const blockedSet = await getBlockedSet();
-    if (blockedSet.has(ip)) {
-      return res.status(403).json({
-        type: "blocked",
-        reply: "Acceso restringido por políticas de seguridad. Si consideras que es un error, contacta al administrador.",
-      });
+    if (!userMessage.trim()) {
+      return res.status(400).json({ reply: "Debes escribir un mensaje." });
     }
 
-    // Anti-flood
-    const flood = checkFlood(ip);
-    if (flood.blocked) {
-      const sec = Math.ceil(flood.wait / 1000);
+    // Guardar mensaje de usuario
+    await Message.create({ role: "user", text: userMessage });
 
-      // 🔴 ALERTA EN VIVO AL PANEL
-      io?.emit("spam_alert", {
-        ip,
-        reason: "FLOOD",
-        waitMs: flood.wait,
-        at: new Date().toISOString(),
-      });
-
-      return res.json({
-        reply: `Demasiados mensajes enviados. Por favor espera ${sec} segundos.`,
-        source: "flood-protection",
-      });
-    }
-
-    const userMessage = req.body?.message?.trim();
-    if (!userMessage) return res.status(400).json({ reply: "Debes escribir un mensaje." });
-
-    // Guardar USER
-    const userDoc = await Message.create({ role: "user", text: userMessage, ip });
-    io?.emit("new_message", userDoc);
-
-    // Custom reply
+    // 1️⃣ Revisar respuestas personalizadas primero
     const custom = await findCustomReply(userMessage);
     if (custom) {
-      const botDoc = await Message.create({ role: "bot", text: custom, ip, source: "custom" });
-      io?.emit("new_message", botDoc);
-      return res.json({ reply: custom.reply, source: "custom", type: custom.type || "text", video_url: custom.video_url || custom.video_file || "" });
+      await Message.create({ role: "bot", text: custom });
+      return res.json({ reply: custom, source: "custom" });
     }
 
-
-    // Límite diario SOLO para consultas a IA (no aplica a respuestas personalizadas)
-    const today0 = new Date(); today0.setHours(0,0,0,0);
-    const aiLimit = parseInt(await getSetting("ai_daily_limit_per_ip", process.env.AI_DAILY_LIMIT_PER_IP || 20), 10);
-    if (aiLimit > 0) {
-      const aiUsed = await Message.countDocuments({
-        ip,
-        role: "bot",
-        source: { $in: ["gemini", "openai"] },
-        createdAt: { $gte: today0 }
-      });
-      if (aiUsed >= aiLimit) {
-        return res.status(429).json({
-          type: "limit",
-          reply: `Has alcanzado el límite diario de consultas automatizadas (${aiLimit}). Intenta mañana o contacta al administrador.`,
-        });
-      }
-    }
-
+    // 2️⃣ Si no hay respuesta personalizada, llamar IA
     const messages = [
-      { role: "system", content: "Eres el asistente INDARELÍN. Responde claro, respetuoso y útil." },
+      {
+        role: "system",
+        content:
+          "Eres el asistente INDARELÍN. Responde de forma clara, respetuosa y útil. Si la pregunta es legal, responde de forma informativa (no das asesoría formal).",
+      },
       { role: "user", content: userMessage },
     ];
 
-    // Gemini -> OpenAI fallback
-    let reply = await callGemini(messages);
-    let source = "gemini";
+    let reply;
+    let source;
 
-    if (!reply) {
+    if (useGemini) {
+      reply = await callGemini(messages);
+      source = "gemini";
+    } else {
       reply = await callOpenAI(messages);
       source = "openai";
     }
 
-    if (!reply) {
-      reply = "En este momento estamos experimentando alta demanda. Por favor intenta más tarde.";
-      source = "fallback";
-    }
+    // Alternar para la próxima vez
+    useGemini = !useGemini;
 
-    // Guardar BOT
-    const botDoc = await Message.create({ role: "bot", text: reply, ip, source });
-    io?.emit("new_message", botDoc);
+    await Message.create({ role: "bot", text: reply });
 
-    return res.json({ reply, source });
+    res.json({ reply, source });
   } catch (error) {
     console.error("Error en sendChat:", error);
-    return res.status(500).json({
-      reply: "Estamos experimentando un problema técnico. Intenta nuevamente en unos minutos.",
-    });
+    res.status(500).json({ reply: "Error en el servidor." });
   }
 };
