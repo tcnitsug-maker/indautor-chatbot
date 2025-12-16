@@ -59,10 +59,35 @@ function escapeHtml(text) {
 }
 
 async function fetchJson(url, options = {}) {
-  options.headers = {
-    ...(options.headers || {}),
-    "Content-Type": options.body ? "application/json" : (options.headers || {})["Content-Type"],
-    Authorization: "Bearer " + token,
+  const token = localStorage.getItem("adminToken");
+
+  if (!token) {
+    logout();
+    throw new Error("Sesión no iniciada");
+  }
+
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token,
+      ...(options.headers || {})
+    }
+  });
+
+  if (res.status === 401) {
+    alert("Tu sesión expiró. Inicia sesión nuevamente.");
+    logout();
+    throw new Error("Sesión expirada");
+  }
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Error ${res.status}: ${txt}`);
+  }
+
+  return res.json();
+}
   };
 
   const res = await fetch(url, options);
