@@ -1,30 +1,36 @@
 // =============================
 // AUTH (obligatorio)
 // =============================
-const token = localStorage.token;
+const token = localStorage.getItem("adminToken");
 if (!token) location.href = "/admin-login.html";
-
 
 function parseJwt(token) {
   try {
     const base64Url = token.split(".")[1];
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
     return JSON.parse(jsonPayload);
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 const adminInfo = parseJwt(token) || {};
 const ADMIN_ROLE = (adminInfo.role || "support").toLowerCase();
-const ADMIN_USERNAME = adminInfo.username || "";
+const ADMIN_USERNAME = adminInfo.username || "admin";
 
 function logout() {
-  localStorage.removeItem("token");
+  localStorage.removeItem("adminToken");
   location.href = "/admin-login.html";
 }
 
 // helpers permisos
-const ROLE_ORDER = ["support","analyst","editor","super"];
+const ROLE_ORDER = ["support", "analyst", "editor", "super"];
 function roleAtLeast(required) {
   return ROLE_ORDER.indexOf(ADMIN_ROLE) >= ROLE_ORDER.indexOf(required);
 }
@@ -58,6 +64,9 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;");
 }
 
+// =============================
+// FETCH CON AUTO-LOGOUT
+// =============================
 async function fetchJson(url, options = {}) {
   const token = localStorage.getItem("adminToken");
 
@@ -75,21 +84,20 @@ async function fetchJson(url, options = {}) {
     }
   });
 
- const res = await fetch(url, options);
+  if (res.status === 401) {
+    alert("Tu sesión expiró. Inicia sesión nuevamente.");
+    logout();
+    throw new Error("Sesión expirada");
+  }
 
-if (res.status === 401) {
-  alert("Tu sesión expiró. Inicia sesión nuevamente.");
-  logout();
-  throw new Error("Sesión expirada");
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Error ${res.status}: ${txt}`);
+  }
+
+  return res.json();
 }
 
-if (!res.ok) {
-  const txt = await res.text();
-  throw new Error(`Error ${res.status}: ${txt}`);
-}
-
-return res.json();
-  
 // =============================
 // TOASTS (notificaciones)
 // =============================
@@ -111,14 +119,22 @@ function toast(msg, type = "info") {
   ensureToastRoot();
   const root = document.getElementById("toastRoot");
   const t = document.createElement("div");
-  t.style.background = type === "error" ? "#ffdddd" : type === "success" ? "#ddffdd" : "#ffffff";
+  t.style.background =
+    type === "error" ? "#ffdddd" :
+    type === "success" ? "#ddffdd" :
+    "#ffffff";
   t.style.border = "1px solid #ccc";
   t.style.borderRadius = "10px";
   t.style.padding = "10px 12px";
   t.style.boxShadow = "0 2px 10px rgba(0,0,0,.2)";
   t.style.maxWidth = "320px";
-  t.innerHTML = `<div style="font-weight:700;margin-bottom:4px;">${type.toUpperCase()}</div>
-                 <div style="font-size:14px;">${escapeHtml(msg)}</div>`;
+  t.innerHTML = `
+    <div style="font-weight:700;margin-bottom:4px;">
+      ${type.toUpperCase()}
+    </div>
+    <div style="font-size:14px;">
+      ${escapeHtml(msg)}
+    </div>`;
   root.appendChild(t);
   setTimeout(() => t.remove(), 5000);
 }
@@ -127,34 +143,43 @@ function toast(msg, type = "info") {
 // TABS
 // =============================
 function setActiveTab(tabId) {
-  document.querySelectorAll(".tab-content").forEach((sec) => {
+  document.querySelectorAll(".tab-content").forEach(sec => {
     sec.classList.toggle("active", sec.id === tabId);
   });
-  document.querySelectorAll("#navbar button").forEach((btn) => {
+
+  document.querySelectorAll("#navbar button").forEach(btn => {
     btn.classList.toggle("active", btn.getAttribute("data-tab") === tabId);
   });
 
-  if (tabId === "dashboard") loadDashboard();
-  if (tabId === "ips") loadIPs();
-  if (tabId === "messages") loadGeneralHistory();
-  if (tabId === "custom") loadCustomReplies();
-  if (tabId === "videos") loadVideos();
-  if (tabId === "users") loadUsers();
-  if (tabId === "profile") loadProfile();
+  if (tabId === "dashboard") loadDashboard?.();
+  if (tabId === "ips") loadIPs?.();
+  if (tabId === "messages") loadGeneralHistory?.();
+  if (tabId === "custom") loadCustomReplies?.();
+  if (tabId === "videos") loadVideos?.();
+  if (tabId === "users") loadUsers?.();
+  if (tabId === "profile") loadProfile?.();
 }
 
+// =============================
+// INIT
+// =============================
 document.addEventListener("DOMContentLoaded", () => {
   // Header user info
   const whoUser = document.getElementById("whoUser");
   const whoRole = document.getElementById("whoRole");
-  if (whoUser) whoUser.textContent = ADMIN_USERNAME || "admin";
+
+  if (whoUser) whoUser.textContent = ADMIN_USERNAME;
   if (whoRole) whoRole.textContent = ADMIN_ROLE;
 
-  document.querySelectorAll("#navbar button").forEach((btn) => {
-    btn.addEventListener("click", () => setActiveTab(btn.getAttribute("data-tab")));
+  document.querySelectorAll("#navbar button").forEach(btn => {
+    btn.addEventListener("click", () =>
+      setActiveTab(btn.getAttribute("data-tab"))
+    );
   });
+
   setActiveTab("dashboard");
 });
+
 
 // =============================
 // DASHBOARD
