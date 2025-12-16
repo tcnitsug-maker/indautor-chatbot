@@ -1323,5 +1323,3 @@ function scrollToCreateUser() {
   const el = document.getElementById(id);
   if (el) el.addEventListener("input", updatePreview);
 });
-
-}
