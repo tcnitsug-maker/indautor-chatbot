@@ -75,27 +75,21 @@ async function fetchJson(url, options = {}) {
     }
   });
 
-  if (res.status === 401) {
-    alert("Tu sesión expiró. Inicia sesión nuevamente.");
-    logout();
-    throw new Error("Sesión expirada");
-  }
+ const res = await fetch(url, options);
 
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Error ${res.status}: ${txt}`);
-  }
-
-  return res.json();
-}
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Error ${res.status}: ${txt}`);
-  }
-  return res.json();
+if (res.status === 401) {
+  alert("Tu sesión expiró. Inicia sesión nuevamente.");
+  logout();
+  throw new Error("Sesión expirada");
 }
 
+if (!res.ok) {
+  const txt = await res.text();
+  throw new Error(`Error ${res.status}: ${txt}`);
+}
+
+return res.json();
+  
 // =============================
 // TOASTS (notificaciones)
 // =============================
