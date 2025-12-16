@@ -1291,35 +1291,22 @@ async function exportBlockedIPsXLSX() {
   }
 }
 
-async function exportMetricsXLSX() {
+async function exportMetricsLast30Days() {
   try {
     // exporta últimos 30 días
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - 30);
 
-    const startStr = start.toISOString().slice(0,10);
-    const endStr = end.toISOString().slice(0,10);
+    const startStr = start.toISOString().slice(0, 10);
+    const endStr = end.toISOString().slice(0, 10);
 
-    await downloadBlob(`/metrics/export-xlsx?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`, "metricas.xlsx");
+    await downloadBlob(
+      `/metrics/export-xlsx?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`,
+      "metricas.xlsx"
+    );
   } catch (e) {
     console.error(e);
     toast("Error exportando métricas", "error");
   }
 }
-
-function scrollToCreateUser() {
-  showTab("users");
-  const el = document.getElementById("newUserUsername") || document.getElementById("newUsername");
-  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-}
-  [
-  "replyText",
-  "replyType",
-  "replyPriority",
-  "replyVideoUrl",
-  "replyActive"
-].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener("input", updatePreview);
-});
