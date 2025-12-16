@@ -481,7 +481,6 @@ async function addCustom() {
     toast("Error agregando respuesta personalizada", "error");
   }
 }
-
 async function deleteCustom(id) {
   if (!confirm("¿Eliminar esta respuesta personalizada?")) return;
   try {
@@ -492,13 +491,14 @@ async function deleteCustom(id) {
     console.error(err);
     toast("Error eliminando", "error");
   }
-  }
+}
+
 function updatePreview() {
   const text = document.getElementById("replyText")?.value || "";
   const type = document.getElementById("replyType")?.value || "text";
   const priority = document.getElementById("replyPriority")?.value || "—";
   const active = document.getElementById("replyActive")?.checked;
-}
+
   document.getElementById("previewType").textContent = "Tipo: " + type;
   document.getElementById("previewPriority").textContent = "Prioridad: " + priority;
   document.getElementById("previewStatus").textContent =
@@ -515,11 +515,8 @@ function updatePreview() {
     box.textContent = text;
   } else if (type === "video") {
     const url = document.getElementById("replyVideoUrl")?.value;
-
     if (url) {
-      box.innerHTML = `
-        <iframe src="${url}" frameborder="0" allowfullscreen></iframe>
-      `;
+      box.innerHTML = `<iframe src="${url}" frameborder="0" allowfullscreen></iframe>`;
     } else {
       box.innerHTML = "<em>Selecciona un video para la vista previa</em>";
     }
