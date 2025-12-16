@@ -1,199 +1,404 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Panel Administrativo - INDARELÍN</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Panel Administrativo INDARELÍN</title>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #004aad;
-      color: #fff;
-      padding: 10px 20px;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 20px;
-    }
-    main {
-      padding: 20px;
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-    #loginBox, #panelBox {
-      background: #fff;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-    }
-    input[type="password"],
-    input[type="text"],
-    textarea {
-      width: 100%;
-      padding: 8px;
-      box-sizing: border-box;
-      margin-top: 4px;
-    }
-    button {
-      background: #004aad;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      padding: 8px 12px;
-      cursor: pointer;
-    }
-    button:hover {
-      opacity: 0.9;
-    }
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid #ccc;
-      margin-bottom: 10px;
-    }
-    .tab {
-      padding: 8px 14px;
-      cursor: pointer;
-      border-radius: 6px 6px 0 0;
-      margin-right: 5px;
-      background: #eee;
-    }
-    .tab.active {
-      background: #fff;
-      border-bottom: 2px solid #004aad;
-      font-weight: bold;
-    }
-    .tab-content {
-      display: none;
-    }
-    .tab-content.active {
-      display: block;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 6px;
-      vertical-align: top;
-    }
-    th {
-      background: #f7f7f7;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 6px;
-      font-size: 11px;
-      border-radius: 4px;
-      background: #eee;
-    }
-    .badge.user {
-      background: #d1e7ff;
-    }
-    .badge.bot {
-      background: #d4edda;
-    }
-    .badge.custom {
-      background: #fff3cd;
-    }
-    .small {
-      font-size: 12px;
-      color: #666;
-    }
-  </style>
+<link rel="stylesheet" href="admin.css" />
+
+<!-- LEAFLET MAP -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+<!-- CHART JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
 <body>
-  <header>
-    <h1>Panel Administrativo - INDARELÍN</h1>
-  </header>
 
-  <main>
-    <!-- Login -->
-    <section id="loginBox">
-      <h2>Acceso administrador</h2>
-      <p>Ingresa la contraseña:</p>
-      <input type="password" id="adminPass" placeholder="Contraseña" />
-      <br /><br />
-      <button onclick="loginAdmin()">Entrar</button>
-      <p id="loginError" style="color:red; display:none;">Contraseña incorrecta</p>
-    </section>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">INDARELÍN</div>
+    <div class="title">Panel Administrativo</div>
+  </div>
+  <div class="who">
+    <span id="whoUser" class="who-user">—</span>
+    <span id="whoRole" class="who-role badge">—</span>
+    <button class="btn" onclick="logout()">Salir</button>
+  </div>
+</header>
 
-    <!-- Panel -->
-    <section id="panelBox" style="display:none;">
-      <div class="tabs">
-        <div class="tab active" data-tab="tabMessages">Historial de conversaciones</div>
-        <div class="tab" data-tab="tabCustom">Respuestas personalizadas</div>
+<div id="navbar">
+  <button data-tab="dashboard">📈 Dashboard</button>
+  <button data-tab="ips">🌍 IPs & Geolocalización</button>
+  <button data-tab="security">🔒 Seguridad (IPs)</button>
+  <button data-tab="ipHistory">📜 Historial por IP</button>
+  <button data-tab="messages">💬 Historial General</button>
+  <button data-tab="custom">🧠 Respuestas</button>
+  <button data-tab="videos">🎥 Videos</button>
+  <button data-tab="users">👤 Usuarios</button>
+  <button data-tab="profile">⚙️ Mi perfil</button>
+</div>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <section id="dashboard" class="tab-content active">
+    <h2>📊 Dashboard General</h2>
+
+    <div class="cards">
+
+      <div class="card">
+        <h3>Total Mensajes</h3>
+        <p id="totalMessages">0</p>
       </div>
 
-      <!-- Historial -->
-      <div id="tabMessages" class="tab-content active">
-        <button onclick="loadMessages()">🔄 Recargar</button>
-        <table>
-          <thead>
-            <tr>
-              <th>Rol</th>
-              <th>Mensaje</th>
-              <th>Fecha</th>
-              <th>Eliminar</th>
-            </tr>
-          </thead>
-          <tbody id="messagesTable"></tbody>
-        </table>
+      <div class="card">
+        <h3>Total IPs Únicas</h3>
+        <p id="totalIPs">0</p>
       </div>
 
-      <!-- Respuestas personalizadas -->
-      <div id="tabCustom" class="tab-content">
-        <h3>Respuestas personalizadas</h3>
-        <form id="customForm">
-          <input type="hidden" id="customId" />
+      <div class="card">
+        <h3>Consultas Hoy</h3>
+        <p id="todayMessages">0</p>
+      </div>
 
-          <label>Pregunta base</label>
-          <input type="text" id="customQuestion" required />
+    </div>
 
-          <label>Respuesta</label>
-          <textarea id="customAnswer" rows="4" required></textarea>
+    <canvas id="trafficChart"></canvas>
+  </section>
 
-          <label>Palabras clave (separadas por coma)</label>
-          <input type="text" id="customKeywords" placeholder="ej. pensión, custodia, violencia" />
+  <!-- IP LIST -->
+  <section id="ips" class="tab-content">
+    <h2>🌍 IPs Conectadas</h2>
+    <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
 
-          <label>
-            <input type="checkbox" id="customEnabled" checked /> Activar esta respuesta
-          </label>
-          <br /><br />
-          <button type="submit">Guardar</button>
-          <button type="button" onclick="resetCustomForm()" style="background:#777;">Limpiar</button>
-        </form>
+    <table>
+      <thead>
+        <tr>
+          <th>IP</th>
+          <th>Mensajes</th>
+          <th>Última vez</th>
+          <th>Ciudad</th>
+          <th>País</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="ipTable"></tbody>
+    </table>
+  </section>
+  <!-- SECURITY: BLOCKED IPS + IA LIMIT -->
+  <section id="security" class="tab-content">
+    <h2>🔒 Seguridad</h2>
 
-        <h3>Listado</h3>
-        <table>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>IPs bloqueadas</h3>
+          <div class="actions">
+            <button class="btn" onclick="loadBlockedIPs()">🔄 Recargar</button>
+            <button class="btn secondary" onclick="exportBlockedIPsXLSX()">⬇️ Exportar Excel</button>
+          </div>
+        </div>
+
+        <div class="form inline">
+          <input id="blockIpValue" class="input" placeholder="IP (ej: 187.210.10.10)" />
+          <input id="blockIpReason" class="input" placeholder="Motivo (opcional)" />
+          <button class="btn danger" onclick="blockIP()">Bloquear</button>
+        </div>
+
+        <table class="table">
           <thead>
             <tr>
-              <th>Pregunta</th>
-              <th>Respuesta</th>
-              <th>Palabras clave</th>
-              <th>Activa</th>
+              <th>IP</th>
+              <th>Estado</th>
+              <th>Motivo</th>
+              <th>Actualizado</th>
               <th>Acciones</th>
             </tr>
           </thead>
-          <tbody id="customTable"></tbody>
+          <tbody id="blockedIPsTable"></tbody>
+        </table>
+
+        <div class="hint">Solo <b>super</b> puede bloquear / desbloquear IPs.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Límite diario de IA (por IP)</h3>
+          <div class="actions">
+            <button class="btn" onclick="loadSettings()">🔄 Cargar</button>
+          </div>
+        </div>
+
+        <div class="form">
+          <label>Límite de consultas IA por día (0 = sin límite)</label>
+          <input id="aiLimitPerIp" class="input" type="number" min="0" max="10000" placeholder="Ej: 20" />
+          <button class="btn" onclick="saveAiLimit()">Guardar</button>
+          <div class="hint">Este límite aplica <b>solo</b> cuando el chatbot usa IA (Gemini/OpenAI). Las respuestas personalizadas no cuentan.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- IP HISTORY -->
+  <section id="ipHistory" class="tab-content">
+    <h2>📜 Historial por IP</h2>
+    <input type="text" placeholder="Escribe IP..." id="ipSearch" />
+    <button onclick="loadIPHistory()">Buscar</button>
+    <div id="ipHistoryBox"></div>
+  </section>
+
+  <!-- ORIGINAL MESSAGE HISTORY -->
+  <section id="messages" class="tab-content">
+    <h2>💬 Historial General</h2>
+    <table>
+      <thead>
+        <tr><th>Rol</th><th>Mensaje</th><th>Fecha</th></tr>
+      </thead>
+      <tbody id="generalHistory"></tbody>
+    </table>
+  </section>
+
+  <!-- CUSTOM REPLIES (OLD PANEL) -->
+  
+<section id="custom" class="tab-content">
+  <h2>🧠 Respuestas Personalizadas</h2>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="btn" onclick="downloadCustomTemplate()">⬇️ Plantilla Excel</button>
+      <label class="btn" style="cursor:pointer;">
+        📤 Importar Excel/CSV
+        <input id="customImportFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importCustomReplies()" />
+      </label>
+      <span class="muted">(Se crea/actualiza por trigger)</span>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn" onclick="downloadCustomCSV()">⬇️ Exportar CSV</button>
+      <button class="btn" onclick="downloadCustomPDF()">⬇️ Exportar PDF</button>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Lista</h3>
+        <input id="customSearch" class="input" placeholder="Buscar trigger o keyword..." />
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Trigger</th>
+            <th>Tipo</th>
+            <th>Prioridad</th>
+            <th>Activo</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="customTable"></tbody>
+      </table>
+
+      <div class="hint">
+        * Las respuestas se evalúan por <b>prioridad</b> (mayor primero).
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h3 id="customFormTitle">Crear / Editar</h3>
+        <div class="row">
+          <button id="btnNewCustom" class="btn" onclick="newCustom()">➕ Nuevo</button>
+        </div>
+      </div>
+
+      <div class="form">
+        <input type="hidden" id="customId" />
+        <label>Trigger (pregunta clave)</label>
+        <input id="triggerInput" class="input" placeholder="Ej: horario, requisitos, etc." />
+
+        <label>Respuesta (texto)</label>
+        <textarea id="responseInput" class="textarea" placeholder="Escribe la respuesta..."></textarea>
+
+        <div class="row">
+          <div>
+            <label>Palabras clave (separadas por coma)</label>
+            <input id="keywordsInput" class="input" placeholder="ej: costo, precio, pago" />
+          </div>
+          <div>
+            <label>Prioridad</label>
+            <input id="priorityInput" class="input" type="number" min="1" max="100" value="10" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Tipo</label>
+            <select id="typeInput" class="input" onchange="onTypeChange()">
+              <option value="text">Texto</option>
+              <option value="video">Video</option>
+            </select>
+          </div>
+          <div class="switch">
+            <label><input type="checkbox" id="enabledInput" checked /> Activo</label>
+          </div>
+        </div>
+
+        <div id="videoBox" class="video-box hidden">
+          <div class="row">
+            <div>
+              <label>Video (subido)</label>
+              <select id="videoSelect" class="input"></select>
+              <small>Tip: sube videos en la pestaña 🎥 Videos.</small>
+            </div>
+            <div>
+              <label>O URL externa (YouTube embed)</label>
+              <input id="videoUrlInput" class="input" placeholder="https://www.youtube.com/embed/XXXX" />
+            </div>
+          </div>
+
+          <div class="preview">
+            <div id="videoPreview"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="btn primary" onclick="saveCustom()">💾 Guardar</button>
+          <button class="btn danger" id="btnDeleteCustom" onclick="deleteCustom()" style="display:none;">🗑️ Eliminar</button>
+        </div>
+
+        <div class="hint" id="permHint"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+  <!-- USERS (ADMIN USERS) -->
+  <section id="users" class="tab-content">
+    <h2>👤 Usuarios (Administradores)</h2>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Lista de usuarios</h3>
+          <button class="btn" onclick="loadUsers()">🔄 Recargar</button>
+          <button class="btn" onclick="scrollToCreateUser()">➕ Agregar usuario</button>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Rol</th>
+              <th>Activo</th>
+              <th>Creado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="usersTable"></tbody>
+        </table>
+        <div class="hint" id="usersPermHint"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Crear usuario</h3>
+        </div>
+        <div class="form">
+          <label>Usuario</label>
+          <input id="newUserUsername" class="input" placeholder="ej: soporte1" />
+          <label>Contraseña</label>
+          <input id="newUserPassword" class="input" type="password" placeholder="mínimo 6" />
+          <div class="row">
+            <div>
+              <label>Rol</label>
+              <select id="newUserRole" class="input">
+                <option value="support">support (básico)</option>
+                <option value="analyst">analyst (lectura)</option>
+                <option value="editor">editor (edita respuestas)</option>
+                <option value="super">super (todo)</option>
+              </select>
+            </div>
+            <div class="switch">
+              <label><input type="checkbox" id="newUserActive" checked /> Activo</label>
+            </div>
+          </div>
+          <button class="btn primary" onclick="createUser()">➕ Crear</button>
+          <div class="hint">* Solo rol <b>super</b> puede administrar usuarios.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROFILE -->
+  <section id="profile" class="tab-content">
+    <h2>⚙️ Mi perfil</h2>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Datos</h3>
+          <button class="btn" onclick="loadProfile()">🔄 Recargar</button>
+        </div>
+        <div class="hint" id="profileBox">—</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Cambiar contraseña</h3>
+        </div>
+        <div class="form">
+          <label>Contraseña actual</label>
+          <input id="myCurrentPassword" class="input" type="password" />
+          <label>Nueva contraseña</label>
+          <input id="myNewPassword" class="input" type="password" />
+          <button class="btn primary" onclick="changeMyPassword()">Guardar</button>
+          <div class="hint">* Mínimo 6 caracteres.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+
+  <section id="videos" class="tab-content">
+    <h2>🎥 Biblioteca de Videos</h2>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Subir video (MP4/WebM, máx 50MB)</h3>
+        </div>
+
+        <div class="form">
+          <input type="file" id="videoFile" accept="video/mp4,video/webm,video/ogg" class="input" />
+          <button class="btn primary" onclick="uploadVideo()">⬆️ Subir</button>
+          <div class="hint">Los roles <b>editor</b> y <b>super</b> pueden subir. Solo <b>super</b> puede eliminar.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Videos subidos</h3>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>Nombre</th><th>Fecha</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="videosTable"></tbody>
         </table>
       </div>
-    </section>
-  </main>
+    </div>
 
-  <script src="admin.js"></script>
+    <div class="panel">
+      <div class="panel-header"><h3>Vista previa</h3></div>
+      <div id="videoLibraryPreview" class="preview"></div>
+    </div>
+  </section>
+
+</main>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="admin.js"></script>
+
 </body>
 </html>
