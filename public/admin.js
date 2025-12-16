@@ -416,7 +416,7 @@ async function loadGeneralHistory() {
 // =============================
 // CUSTOM REPLIES
 // =============================
-async function loadCustomReplies() {
+async function loadCustomRepliesSimple() {
   try {
     const replies = await fetchJson(CUSTOM_URL);
     const tbody = document.getElementById("customTable");
@@ -492,12 +492,13 @@ async function deleteCustom(id) {
     console.error(err);
     toast("Error eliminando", "error");
   }
+  }
 function updatePreview() {
   const text = document.getElementById("replyText")?.value || "";
   const type = document.getElementById("replyType")?.value || "text";
   const priority = document.getElementById("replyPriority")?.value || "—";
   const active = document.getElementById("replyActive")?.checked;
-
+}
   document.getElementById("previewType").textContent = "Tipo: " + type;
   document.getElementById("previewPriority").textContent = "Prioridad: " + priority;
   document.getElementById("previewStatus").textContent =
