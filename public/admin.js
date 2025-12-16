@@ -811,7 +811,7 @@ async function deleteCustomById(id) {
   if (!roleAtLeast("super")) return toast("Solo super puede eliminar", "error");
   if (!confirm("¿Eliminar esta respuesta?")) return;
   try {
-    const r = await fetch(`${CUSTOM_URL}/${id}`, {
+    const r = await fetchJson(`${CUSTOM_URL}/${id}`, {
       method: "DELETE",
       headers: { Authorization: "Bearer " + token },
     });
@@ -1158,18 +1158,6 @@ async function changeMyPassword() {
     toast(e.message || "No se pudo cambiar", "error");
   }
 }
-
-// util
-function escapeHtml(str="") {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-
 // =============================
 // SEGURIDAD: IPs BLOQUEADAS + LÍMITE IA
 // =============================
@@ -1213,7 +1201,7 @@ async function blockIP() {
       method: "POST",
       body: JSON.stringify({ ip, reason })
     });
-    toast("IP bloqueada", "ok");
+    toast("IP bloqueada", "success");
     document.getElementById("blockIpValue").value = "";
     document.getElementById("blockIpReason").value = "";
     loadBlockedIPs();
