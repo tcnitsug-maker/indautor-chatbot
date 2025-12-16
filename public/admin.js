@@ -88,8 +88,6 @@ async function fetchJson(url, options = {}) {
 
   return res.json();
 }
-  };
-
   const res = await fetch(url, options);
   if (!res.ok) {
     const txt = await res.text();
