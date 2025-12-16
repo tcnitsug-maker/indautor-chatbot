@@ -78,10 +78,12 @@ async function fetchJson(url, options = {}) {
   const res = await fetch(url, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...(options.headers || {}),
+      "Content-Type": options.body
+        ? "application/json"
+        : (options.headers || {})["Content-Type"],
       "Authorization": "Bearer " + token,
-      ...(options.headers || {})
-    }
+    },
   });
 
   if (res.status === 401) {
@@ -97,7 +99,6 @@ async function fetchJson(url, options = {}) {
 
   return res.json();
 }
-
 // =============================
 // TOASTS (notificaciones)
 // =============================
