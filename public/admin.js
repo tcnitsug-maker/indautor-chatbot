@@ -1,36 +1,30 @@
 // =============================
 // AUTH (obligatorio)
 // =============================
-const token = localStorage.getItem("adminToken");
+const token = localStorage.token;
 if (!token) location.href = "/admin-login.html";
+
 
 function parseJwt(token) {
   try {
     const base64Url = token.split(".")[1];
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
+    const jsonPayload = decodeURIComponent(atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
     return JSON.parse(jsonPayload);
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 const adminInfo = parseJwt(token) || {};
 const ADMIN_ROLE = (adminInfo.role || "support").toLowerCase();
-const ADMIN_USERNAME = adminInfo.username || "admin";
+const ADMIN_USERNAME = adminInfo.username || "";
 
 function logout() {
-  localStorage.removeItem("adminToken");
+  localStorage.removeItem("token");
   location.href = "/admin-login.html";
 }
 
 // helpers permisos
-const ROLE_ORDER = ["support", "analyst", "editor", "super"];
+const ROLE_ORDER = ["support","analyst","editor","super"];
 function roleAtLeast(required) {
   return ROLE_ORDER.indexOf(ADMIN_ROLE) >= ROLE_ORDER.indexOf(required);
 }
@@ -64,41 +58,21 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;");
 }
 
-// =============================
-// FETCH CON AUTO-LOGOUT
-// =============================
 async function fetchJson(url, options = {}) {
-  const token = localStorage.getItem("adminToken");
+  options.headers = {
+    ...(options.headers || {}),
+    "Content-Type": options.body ? "application/json" : (options.headers || {})["Content-Type"],
+    Authorization: "Bearer " + token,
+  };
 
-  if (!token) {
-    logout();
-    throw new Error("Sesión no iniciada");
-  }
-
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      ...(options.headers || {}),
-      "Content-Type": options.body
-        ? "application/json"
-        : (options.headers || {})["Content-Type"],
-      "Authorization": "Bearer " + token,
-    },
-  });
-
-  if (res.status === 401) {
-    alert("Tu sesión expiró. Inicia sesión nuevamente.");
-    logout();
-    throw new Error("Sesión expirada");
-  }
-
+  const res = await fetch(url, options);
   if (!res.ok) {
     const txt = await res.text();
     throw new Error(`Error ${res.status}: ${txt}`);
   }
-
   return res.json();
 }
+
 // =============================
 // TOASTS (notificaciones)
 // =============================
@@ -120,22 +94,14 @@ function toast(msg, type = "info") {
   ensureToastRoot();
   const root = document.getElementById("toastRoot");
   const t = document.createElement("div");
-  t.style.background =
-    type === "error" ? "#ffdddd" :
-    type === "success" ? "#ddffdd" :
-    "#ffffff";
+  t.style.background = type === "error" ? "#ffdddd" : type === "success" ? "#ddffdd" : "#ffffff";
   t.style.border = "1px solid #ccc";
   t.style.borderRadius = "10px";
   t.style.padding = "10px 12px";
   t.style.boxShadow = "0 2px 10px rgba(0,0,0,.2)";
   t.style.maxWidth = "320px";
-  t.innerHTML = `
-    <div style="font-weight:700;margin-bottom:4px;">
-      ${type.toUpperCase()}
-    </div>
-    <div style="font-size:14px;">
-      ${escapeHtml(msg)}
-    </div>`;
+  t.innerHTML = `<div style="font-weight:700;margin-bottom:4px;">${type.toUpperCase()}</div>
+                 <div style="font-size:14px;">${escapeHtml(msg)}</div>`;
   root.appendChild(t);
   setTimeout(() => t.remove(), 5000);
 }
@@ -144,43 +110,34 @@ function toast(msg, type = "info") {
 // TABS
 // =============================
 function setActiveTab(tabId) {
-  document.querySelectorAll(".tab-content").forEach(sec => {
+  document.querySelectorAll(".tab-content").forEach((sec) => {
     sec.classList.toggle("active", sec.id === tabId);
   });
-
-  document.querySelectorAll("#navbar button").forEach(btn => {
+  document.querySelectorAll("#navbar button").forEach((btn) => {
     btn.classList.toggle("active", btn.getAttribute("data-tab") === tabId);
   });
 
-  if (tabId === "dashboard") loadDashboard?.();
-  if (tabId === "ips") loadIPs?.();
-  if (tabId === "messages") loadGeneralHistory?.();
-  if (tabId === "custom") loadCustomReplies?.();
-  if (tabId === "videos") loadVideos?.();
-  if (tabId === "users") loadUsers?.();
-  if (tabId === "profile") loadProfile?.();
+  if (tabId === "dashboard") loadDashboard();
+  if (tabId === "ips") loadIPs();
+  if (tabId === "messages") loadGeneralHistory();
+  if (tabId === "custom") loadCustomReplies();
+  if (tabId === "videos") loadVideos();
+  if (tabId === "users") loadUsers();
+  if (tabId === "profile") loadProfile();
 }
 
-// =============================
-// INIT
-// =============================
 document.addEventListener("DOMContentLoaded", () => {
   // Header user info
   const whoUser = document.getElementById("whoUser");
   const whoRole = document.getElementById("whoRole");
-
-  if (whoUser) whoUser.textContent = ADMIN_USERNAME;
+  if (whoUser) whoUser.textContent = ADMIN_USERNAME || "admin";
   if (whoRole) whoRole.textContent = ADMIN_ROLE;
 
-  document.querySelectorAll("#navbar button").forEach(btn => {
-    btn.addEventListener("click", () =>
-      setActiveTab(btn.getAttribute("data-tab"))
-    );
+  document.querySelectorAll("#navbar button").forEach((btn) => {
+    btn.addEventListener("click", () => setActiveTab(btn.getAttribute("data-tab")));
   });
-
   setActiveTab("dashboard");
 });
-
 
 // =============================
 // DASHBOARD
@@ -416,7 +373,7 @@ async function loadGeneralHistory() {
 // =============================
 // CUSTOM REPLIES
 // =============================
-async function loadCustomRepliesSimple() {
+async function loadCustomReplies() {
   try {
     const replies = await fetchJson(CUSTOM_URL);
     const tbody = document.getElementById("customTable");
@@ -481,6 +438,7 @@ async function addCustom() {
     toast("Error agregando respuesta personalizada", "error");
   }
 }
+
 async function deleteCustom(id) {
   if (!confirm("¿Eliminar esta respuesta personalizada?")) return;
   try {
@@ -490,36 +448,6 @@ async function deleteCustom(id) {
   } catch (err) {
     console.error(err);
     toast("Error eliminando", "error");
-  }
-}
-
-function updatePreview() {
-  const text = document.getElementById("replyText")?.value || "";
-  const type = document.getElementById("replyType")?.value || "text";
-  const priority = document.getElementById("replyPriority")?.value || "—";
-  const active = document.getElementById("replyActive")?.checked;
-
-  document.getElementById("previewType").textContent = "Tipo: " + type;
-  document.getElementById("previewPriority").textContent = "Prioridad: " + priority;
-  document.getElementById("previewStatus").textContent =
-    "Estado: " + (active ? "Activo" : "Inactivo");
-
-  const box = document.getElementById("previewContent");
-
-  if (!text && type === "text") {
-    box.innerHTML = "<em>Escribe una respuesta para ver la vista previa…</em>";
-    return;
-  }
-
-  if (type === "text") {
-    box.textContent = text;
-  } else if (type === "video") {
-    const url = document.getElementById("replyVideoUrl")?.value;
-    if (url) {
-      box.innerHTML = `<iframe src="${url}" frameborder="0" allowfullscreen></iframe>`;
-    } else {
-      box.innerHTML = "<em>Selecciona un video para la vista previa</em>";
-    }
   }
 }
 
@@ -808,7 +736,7 @@ async function deleteCustomById(id) {
   if (!roleAtLeast("super")) return toast("Solo super puede eliminar", "error");
   if (!confirm("¿Eliminar esta respuesta?")) return;
   try {
-    const r = await fetchJson(`${CUSTOM_URL}/${id}`, {
+    const r = await fetch(`${CUSTOM_URL}/${id}`, {
       method: "DELETE",
       headers: { Authorization: "Bearer " + token },
     });
@@ -1155,6 +1083,18 @@ async function changeMyPassword() {
     toast(e.message || "No se pudo cambiar", "error");
   }
 }
+
+// util
+function escapeHtml(str="") {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+
 // =============================
 // SEGURIDAD: IPs BLOQUEADAS + LÍMITE IA
 // =============================
@@ -1198,7 +1138,7 @@ async function blockIP() {
       method: "POST",
       body: JSON.stringify({ ip, reason })
     });
-    toast("IP bloqueada", "success");
+    toast("IP bloqueada", "ok");
     document.getElementById("blockIpValue").value = "";
     document.getElementById("blockIpReason").value = "";
     loadBlockedIPs();
@@ -1215,7 +1155,7 @@ async function blockIPQuick(ip) {
       method: "POST",
       body: JSON.stringify({ ip, reason: "" })
     });
-    toast("IP bloqueada", "success");
+    toast("IP bloqueada", "ok");
     loadBlockedIPs();
   } catch (e) {
     console.error(e);
@@ -1230,7 +1170,7 @@ async function unblockIP(ip) {
       method: "POST",
       body: JSON.stringify({ ip })
     });
-    toast("IP desbloqueada", "success");
+    toast("IP desbloqueada", "ok");
     loadBlockedIPs();
   } catch (e) {
     console.error(e);
@@ -1245,7 +1185,7 @@ async function loadSettings() {
     const v = s.ai_daily_limit_per_ip ?? "";
     const el = document.getElementById("aiLimitPerIp");
     if (el) el.value = v;
-    toast("Settings cargados", "success");
+    toast("Settings cargados", "ok");
   } catch (e) {
     console.error(e);
     toast("Error cargando settings", "error");
@@ -1260,7 +1200,7 @@ async function saveAiLimit() {
       method: "PUT",
       body: JSON.stringify({ ai_daily_limit_per_ip: v })
     });
-    toast("Límite IA guardado", "success");
+    toast("Límite IA guardado", "ok");
   } catch (e) {
     console.error(e);
     toast("Error guardando setting", "error");
@@ -1277,22 +1217,25 @@ async function exportBlockedIPsXLSX() {
   }
 }
 
-async function exportMetricsLast30Days() {
+async function exportMetricsXLSX() {
   try {
     // exporta últimos 30 días
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - 30);
 
-    const startStr = start.toISOString().slice(0, 10);
-    const endStr = end.toISOString().slice(0, 10);
+    const startStr = start.toISOString().slice(0,10);
+    const endStr = end.toISOString().slice(0,10);
 
-    await downloadBlob(
-      `/metrics/export-xlsx?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`,
-      "metricas.xlsx"
-    );
+    await downloadBlob(`/metrics/export-xlsx?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`, "metricas.xlsx");
   } catch (e) {
     console.error(e);
     toast("Error exportando métricas", "error");
   }
+}
+
+function scrollToCreateUser() {
+  showTab("users");
+  const el = document.getElementById("newUserUsername") || document.getElementById("newUsername");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
 }
