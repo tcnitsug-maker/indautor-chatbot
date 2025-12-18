@@ -26,4 +26,9 @@ app.use((req, res, next) => {
 /* =========================
    ⚠️ ESTÁTICOS SIEMPRE PRIMERO
 ========================= */
-app.use(express.static(path.join(__dirname, "public")));
+
+const PORT = process.env.PORT || 10000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("🚀 INDARELÍN backend running on port", PORT);
+});
