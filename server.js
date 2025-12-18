@@ -2,78 +2,114 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const path = require("path");
+const http = require("http");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
-const chatRoutes = require("./routes/chatRoutes");
-const adminRoutes = require("./routes/adminRoutes");
-const customReplyRoutes = require("./routes/customReplyRoutes");
-
 const app = express();
+const server = http.createServer(app);
 
-// --------------------
-// 🔒 CORS
-// --------------------
-const allowedOrigins = [
-  "https://utneza.store",          // ✅ pon aquí TU dominio real en Hostinger
-  "https://www.utneza.store",
-  "http://localhost:3000",
-  "http://127.0.0.1:5500",
-];
+// =====================
+// SOCKET.IO
+// =====================
+const { Server } = require("socket.io");
+const io = new Server(server, {
+  cors: { origin: "*", methods: ["GET", "POST"] },
+});
+app.locals.io = io;
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      // En desarrollo puedes permitir todo:
-      return cb(null, true);
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+// =====================
+// CONFIG
+// =====================
+const PORT = process.env.PORT || 3000;
 
-// --------------------
-// 🧩 Middlewares
-// --------------------
+// =====================
+// MIDDLEWARES GLOBALES
+// =====================
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --------------------
-// 🗄️ Conexión a MongoDB
-// --------------------
-const MONGO_URI =
-  process.env.MONGO_URI ||
-  "mongodb+srv://TU_USER:TU_PASS@TU_CLUSTER.mongodb.net/chatbot";
-
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("✅ Conectado a MongoDB"))
-  .catch((err) => console.error("❌ Error MongoDB:", err));
-
-// --------------------
-// 📂 Archivos estáticos (admin panel)
-// --------------------
+// =====================
+// ARCHIVOS ESTÁTICOS
+// =====================
 app.use(express.static(path.join(__dirname, "public")));
 
-// --------------------
-// 📦 Rutas API
-// --------------------
-app.use("/chat", chatRoutes);                // POST /chat
-app.use("/admin", adminRoutes);             // login + mensajes
-app.use("/admin/custom-replies", customReplyRoutes); // CRUD respuestas personalizadas
+// =====================
+// MONGODB
+// =====================
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB conectado"))
+  .catch((e) => console.error("❌ MongoDB error:", e.message));
 
-// --------------------
-// 🌐 Ruta del panel administrativo (HTML)
-// --------------------
-app.get("/admin-panel", (req, res) => {
+// =====================
+// HTML PÚBLICO
+// =====================
+app.get("/admin-login.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin-login.html"));
+});
+
+app.get("/admin.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
-// --------------------
-// 🟢 Iniciar servidor
-// --------------------
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
+// =====================
+// AUTH ADMIN (LOGIN)
+// =====================
+// ⚠️ adminAuthRoutes DEBE exportar router con module.exports
+const adminAuthRoutes = require("./routes/adminAuthRoutes");
+app.use("/admin-auth", adminAuthRoutes);
+
+// =====================
+// RUTAS PROTEGIDAS ADMIN
+// =====================
+const authAdmin = require("./middleware/authAdmin");
+// ⚠️ adminRoutes DEBE exportar router con module.exports
+const adminRoutes = require("./routes/adminRoutes");
+
+app.use("/admin", authAdmin("viewer"), adminRoutes);
+
+// =====================
+// CHAT
+// =====================
+// ⚠️ chatController DEBE exportar { sendChat }
+const chatController = require("./controllers/chatController");
+app.post("/chat", chatController.sendChat);
+
+// =====================
+// HOME
+// =====================
+app.get("/", (req, res) => {
+  res.send("✔ INDARELÍN API OK");
+});
+
+// =====================
+// SOCKET AUTH
+// =====================
+io.use((socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error("NO_TOKEN"));
+
+    const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
+    const roles = ["viewer", "admin", "superadmin"];
+    if (!roles.includes(decoded.role)) return next(new Error("BAD_ROLE"));
+
+    socket.admin = decoded;
+    next();
+  } catch (err) {
+    next(new Error("BAD_TOKEN"));
+  }
+});
+
+io.on("connection", (socket) => {
+  console.log("🟢 Admin conectado:", socket.admin?.username);
+});
+
+// =====================
+// START SERVER
+// =====================
+server.listen(PORT, () => {
+  console.log(`🚀 Servidor listo en puerto ${PORT}`);
 });
