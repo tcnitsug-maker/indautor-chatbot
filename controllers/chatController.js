@@ -36,7 +36,7 @@ const FLOOD_MIN_DELAY = 3000;
 const FLOOD_MAX_BURST = 4;
 const FLOOD_BLOCK_TIME = 10000;
 
-const floodMap = new Map(); // ip -> { lastTime, count, blockedUntil }
+const floodMap = new Map();
 
 function checkFlood(ip) {
   const now = Date.now();
@@ -176,7 +176,7 @@ async function callGemini(messages) {
 }
 
 // ----------------------
-// CONTROLLER
+// CONTROLLER - CORREGIDO PARA VIDEOS
 // ----------------------
 exports.sendChat = async (req, res) => {
   const io = req.app?.locals?.io;
@@ -184,12 +184,12 @@ exports.sendChat = async (req, res) => {
   try {
     const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || "unknown";
 
-    // Bloqueo por IP (lista negra en DB)
+    // Bloqueo por IP
     const blockedSet = await getBlockedSet();
     if (blockedSet.has(ip)) {
       return res.status(403).json({
         type: "blocked",
-        reply: "Acceso restringido por políticas de seguridad. Si consideras que es un error, contacta al administrador.",
+        reply: "Acceso restringido por políticas de seguridad.",
       });
     }
 
@@ -198,7 +198,6 @@ exports.sendChat = async (req, res) => {
     if (flood.blocked) {
       const sec = Math.ceil(flood.wait / 1000);
 
-      // 🔴 ALERTA EN VIVO AL PANEL
       io?.emit("spam_alert", {
         ip,
         reason: "FLOOD",
@@ -207,7 +206,7 @@ exports.sendChat = async (req, res) => {
       });
 
       return res.json({
-        reply: `Demasiados mensajes enviados. Por favor espera ${sec} segundos.`,
+        reply: `Demasiados mensajes. Espera ${sec} segundos.`,
         source: "flood-protection",
       });
     }
@@ -215,22 +214,55 @@ exports.sendChat = async (req, res) => {
     const userMessage = req.body?.message?.trim();
     if (!userMessage) return res.status(400).json({ reply: "Debes escribir un mensaje." });
 
-    // Guardar USER
+    // Guardar mensaje del usuario
     const userDoc = await Message.create({ role: "user", text: userMessage, ip });
     io?.emit("new_message", userDoc);
 
-    // Custom reply
+    // 🎥 BUSCAR RESPUESTA PERSONALIZADA (incluye videos)
     const custom = await findCustomReply(userMessage);
+    
     if (custom) {
-      const botDoc = await Message.create({ role: "bot", text: custom, ip, source: "custom" });
+      // ✅ CORRECCIÓN: Guardar solo el texto, no el objeto completo
+      const textToSave = custom.type === "video" 
+        ? `[VIDEO] ${custom.reply || custom.video_name || "Video"}`
+        : custom.reply;
+
+      const botDoc = await Message.create({ 
+        role: "bot", 
+        text: textToSave,
+        ip, 
+        source: "custom" 
+      });
+      
       io?.emit("new_message", botDoc);
-      return res.json({ reply: custom.reply, source: "custom", type: custom.type || "text", video_url: custom.video_url || custom.video_file || "" });
+
+      // ✅ RESPUESTA CORRECTA AL FRONTEND
+      if (custom.type === "video") {
+        // Priorizar URL externa, luego archivo subido
+        const videoUrl = custom.video_url || custom.video_file || "";
+        
+        return res.json({
+          reply: custom.reply || "Aquí está el video solicitado",
+          source: "custom",
+          type: "video",
+          video_url: videoUrl,
+          video_name: custom.video_name || "Video"
+        });
+      } else {
+        // Respuesta de texto normal
+        return res.json({
+          reply: custom.reply,
+          source: "custom",
+          type: "text"
+        });
+      }
     }
 
-
-    // Límite diario SOLO para consultas a IA (no aplica a respuestas personalizadas)
-    const today0 = new Date(); today0.setHours(0,0,0,0);
+    // Límite diario de IA
+    const today0 = new Date(); 
+    today0.setHours(0,0,0,0);
     const aiLimit = parseInt(await getSetting("ai_daily_limit_per_ip", process.env.AI_DAILY_LIMIT_PER_IP || 20), 10);
+    
     if (aiLimit > 0) {
       const aiUsed = await Message.countDocuments({
         ip,
@@ -238,20 +270,21 @@ exports.sendChat = async (req, res) => {
         source: { $in: ["gemini", "openai"] },
         createdAt: { $gte: today0 }
       });
+      
       if (aiUsed >= aiLimit) {
         return res.status(429).json({
           type: "limit",
-          reply: `Has alcanzado el límite diario de consultas automatizadas (${aiLimit}). Intenta mañana o contacta al administrador.`,
+          reply: `Has alcanzado el límite diario (${aiLimit}). Intenta mañana.`,
         });
       }
     }
 
+    // Llamar a IA
     const messages = [
       { role: "system", content: "Eres el asistente INDARELÍN. Responde claro, respetuoso y útil." },
       { role: "user", content: userMessage },
     ];
 
-    // Gemini -> OpenAI fallback
     let reply = await callGemini(messages);
     let source = "gemini";
 
@@ -261,19 +294,20 @@ exports.sendChat = async (req, res) => {
     }
 
     if (!reply) {
-      reply = "En este momento estamos experimentando alta demanda. Por favor intenta más tarde.";
+      reply = "En este momento estamos experimentando alta demanda. Intenta más tarde.";
       source = "fallback";
     }
 
-    // Guardar BOT
+    // Guardar respuesta del bot
     const botDoc = await Message.create({ role: "bot", text: reply, ip, source });
     io?.emit("new_message", botDoc);
 
-    return res.json({ reply, source });
+    return res.json({ reply, source, type: "text" });
+
   } catch (error) {
-    console.error("Error en sendChat:", error);
+    console.error("❌ Error en sendChat:", error);
     return res.status(500).json({
-      reply: "Estamos experimentando un problema técnico. Intenta nuevamente en unos minutos.",
+      reply: "Error técnico. Intenta en unos minutos.",
     });
   }
 };
